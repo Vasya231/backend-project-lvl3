@@ -1,0 +1,19 @@
+{
+  "name": "backend-project-lvl3",
+  "version": "1.0.0",
+  "description": "Web page loader",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vasya231/backend-project-lvl3.git"
+  },
+  "author": "Vasya231",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Vasya231/backend-project-lvl3/issues"
+  },
+  "homepage": "https://github.com/Vasya231/backend-project-lvl3#readme"
+}
