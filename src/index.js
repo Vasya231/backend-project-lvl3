@@ -4,9 +4,11 @@ import axios from 'axios';
 import nodeAdapter from 'axios/lib/adapters/http';
 
 export default (url, pathToDir) => {
-  axios.defaults.adapter = nodeAdapter;
+  const testMode = process.env.TEST_MODE;
+  if (testMode === 'true') {
+    axios.defaults.adapter = nodeAdapter;
+  }
   return axios.get(url).then((response) => {
-    console.log(response.data);
     fs.writeFile(path.join(pathToDir, 'index.html'), response.data);
-  }).catch((error) => console.log(error));
+  });
 };

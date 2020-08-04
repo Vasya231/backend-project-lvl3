@@ -7,6 +7,10 @@ import runApp from '../src/index';
 
 let tmpDir;
 
+beforeAll(() => {
+  process.env.TEST_MODE = 'true';
+});
+
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
