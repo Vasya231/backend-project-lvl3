@@ -4,7 +4,12 @@
   "description": "Web page loader",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "npx jest",
+    "build": "rm -rf dist && npx babel src --out-dir dist --source-maps inline",
+    "prepublishOnly": "npm run build"
+  },
+  "bin": {
+    "page-loader": "dist/bin/page-loader.js"
   },
   "repository": {
     "type": "git",
