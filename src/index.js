@@ -3,12 +3,17 @@ import path from 'path';
 import axios from 'axios';
 import nodeAdapter from 'axios/lib/adapters/http';
 
-export default (url, pathToDir) => {
+import { generateLocalFileName } from './utils';
+
+export default (urlString, pathToDir) => {
   const testMode = process.env.TEST_MODE;
   if (testMode === 'true') {
     axios.defaults.adapter = nodeAdapter;
   }
-  return axios.get(url).then((response) => {
-    fs.writeFile(path.join(pathToDir, 'index.html'), response.data);
+  const url = new URL(urlString);
+  return axios.get(url.href).then((response) => {
+    const localFileName = generateLocalFileName(url);
+    console.log(localFileName);
+    fs.writeFile(path.join(pathToDir, localFileName), response.data);
   });
 };
