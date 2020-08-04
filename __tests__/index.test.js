@@ -15,6 +15,10 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
+afterEach(() => {
+  nock.cleanAll();
+});
+
 test('Should load page', async () => {
   nock('https://ya.ru')
     .get('/')
@@ -28,7 +32,7 @@ test('Should parse path', async () => {
   nock('https://ya.ru')
     .get('/test/test1')
     .reply(200, '!!!');
-  await runApp('https://ya.ru/test', tmpDir);
+  await runApp('https://ya.ru/test/test1', tmpDir);
   const data = await fs.readFile(path.join(tmpDir, 'ya-ru-test-test1.html'), 'utf-8');
   expect(data).toBe('!!!');
 });
