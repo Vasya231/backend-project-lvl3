@@ -15,11 +15,20 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
-test('first', async () => {
+test('Should load page', async () => {
   nock('https://ya.ru')
     .get('/')
     .reply(200, '!!!');
-  await runApp('https://ya.ru/', tmpDir);
-  const data = await fs.readFile(path.join(tmpDir, 'index.html'), 'utf-8');
+  await runApp('https://ya.ru', tmpDir);
+  const data = await fs.readFile(path.join(tmpDir, 'ya-ru.html'), 'utf-8');
+  expect(data).toBe('!!!');
+});
+
+test('Should parse path', async () => {
+  nock('https://ya.ru')
+    .get('/test/test1')
+    .reply(200, '!!!');
+  await runApp('https://ya.ru/test', tmpDir);
+  const data = await fs.readFile(path.join(tmpDir, 'ya-ru-test-test1.html'), 'utf-8');
   expect(data).toBe('!!!');
 });
