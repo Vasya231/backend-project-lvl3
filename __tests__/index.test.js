@@ -22,24 +22,6 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
-test('Should load existing page', async () => {
-  nock('https://ya.ru')
-    .get('/')
-    .reply(200, '!!!');
-  await runApp('https://ya.ru', tmpDir);
-  const data = await fs.readFile(path.join(tmpDir, 'ya-ru.html'), 'utf-8');
-  expect(data).toBe('!!!');
-});
-
-test('Should parse pathname', async () => {
-  nock('https://ya.ru')
-    .get('/test/test1')
-    .reply(200, '!!!');
-  await runApp('https://ya.ru/test/test1', tmpDir);
-  const data = await fs.readFile(path.join(tmpDir, 'ya-ru-test-test1.html'), 'utf-8');
-  expect(data).toBe('!!!');
-});
-
 test('Should save the page, download local resources and change links', async () => {
   nock('https://testhost.ru')
     .get('/page1')
