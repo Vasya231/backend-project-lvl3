@@ -5,21 +5,22 @@ import nock from 'nock';
 
 import runApp from '../src/index';
 
-let tmpDir;
+const pathToInputData = (filename) => `${__dirname}/fixtures/inputData/${filename}`;
+const pathToExpectedData = (filename) => `${__dirname}/fixtures/expected/${filename}`;
 
-beforeAll(() => {
+let tmpDir;
+const expectedData = {};
+
+beforeAll(async () => {
   process.env.TEST_MODE = 'true';
+  expectedData.page1 = await fs.readFile(pathToExpectedData('testhost-ru-page1.html'), 'utf-8');
 });
 
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
-afterEach(() => {
-  nock.cleanAll();
-});
-
-test('Should load page', async () => {
+test('Should load existing page', async () => {
   nock('https://ya.ru')
     .get('/')
     .reply(200, '!!!');
@@ -28,11 +29,21 @@ test('Should load page', async () => {
   expect(data).toBe('!!!');
 });
 
-test('Should parse path', async () => {
+test('Should parse pathname', async () => {
   nock('https://ya.ru')
     .get('/test/test1')
     .reply(200, '!!!');
   await runApp('https://ya.ru/test/test1', tmpDir);
   const data = await fs.readFile(path.join(tmpDir, 'ya-ru-test-test1.html'), 'utf-8');
   expect(data).toBe('!!!');
+});
+
+test('Should save the page, download local resources and change links', async () => {
+  nock('https://testhost.ru')
+    .get('/page1')
+    .replyWithFile(200, pathToInputData('page1.html'));
+  await runApp('https://testhost.ru/page1', tmpDir);
+  const actualData = {};
+  actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
+  expect(actualData.page1).toBe(expectedData.page1);
 });

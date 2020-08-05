@@ -10,10 +10,14 @@ export default (urlString, pathToDir) => {
   if (testMode === 'true') {
     axios.defaults.adapter = nodeAdapter;
   }
+
   const url = new URL(urlString);
+  const localFileName = generateLocalFileName(url);
+
   return axios.get(url.href).then((response) => {
-    const localFileName = generateLocalFileName(url);
-    console.log(localFileName);
+    if (response.status !== 200) {
+      throw new Error('Failed to load the page.');
+    }
     fs.writeFile(path.join(pathToDir, localFileName), response.data);
   });
 };
