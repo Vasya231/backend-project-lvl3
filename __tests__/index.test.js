@@ -14,6 +14,8 @@ const expectedData = {};
 beforeAll(async () => {
   process.env.TEST_MODE = 'true';
   expectedData.page1 = await fs.readFile(pathToExpectedData('testhost-ru-page1.html'), 'utf-8');
+  expectedData.img1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files/assets-img1.jpg'));
+  expectedData.script1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files/assets-script1.js'));
 });
 
 beforeEach(async () => {
@@ -45,5 +47,7 @@ test('Should save the page, download local resources and change links', async ()
   await runApp('https://testhost.ru/page1', tmpDir);
   const actualData = {};
   actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
-  expect(actualData.page1).toBe(expectedData.page1);
+  actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files/assets-img1.jpg'));
+  actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files/assets-script1.js'));
+  expect(actualData).toEqual(expectedData);
 });
