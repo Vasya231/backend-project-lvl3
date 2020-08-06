@@ -15,6 +15,9 @@
     "type": "git",
     "url": "git+https://github.com/Vasya231/backend-project-lvl3.git"
   },
+  "jest": {
+    "testPathIgnorePatterns": ["/node_modules/", "/__tests__/fixtures/"]
+  },
   "author": "Vasya231",
   "license": "ISC",
   "bugs": {

@@ -26,6 +26,15 @@ test('Should save the page, download local resources and change links', async ()
   nock('https://testhost.ru')
     .get('/page1')
     .replyWithFile(200, pathToInputData('page1.html'));
+  nock('https://testhost.ru')
+    .get('/assets/img1.jpg')
+    .replyWithFile(200, pathToInputData('page1_files/img1.jpg'));
+  nock('https://testhost.ru')
+    .get('/assets/script1.js')
+    .replyWithFile(200, pathToInputData('page1_files/script1.js'));
+  nock('https://testhost.ru')
+    .get('/assets/styles.css')
+    .replyWithFile(200, pathToInputData('page1_files/styles.css'));
   await runApp('https://testhost.ru/page1', tmpDir);
   const actualData = {};
   actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
