@@ -3,6 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import nodeAdapter from 'axios/lib/adapters/http';
 import cheerio from 'cheerio';
+import { uniq } from 'lodash';
 
 import { generateLocalFileName, generateResourceDirName, generateResourceFileName } from './utils';
 
@@ -21,12 +22,10 @@ const tags = {
   },
 };
 
-const getLinks = ($, tagName, linkAttr) => {
-  const links = $(tagName).map((i, el) => ({
-    link: $(el).attr(linkAttr),
-    element: el,
-  })).get();
-  return links.filter(({ link }) => (link !== undefined));
+const getResourcePaths = ($, tagName) => {
+  const { linkAttr } = tags[tagName];
+  const links = $(tagName).map((i, element) => $(element).attr(linkAttr)).get();
+  return links.filter((resourcePath) => (resourcePath !== undefined));
 };
 
 export default (urlString, pathToDir) => {
@@ -37,8 +36,10 @@ export default (urlString, pathToDir) => {
 
   const url = new URL(urlString);
   const baseUrl = url.origin;
-  const pageFilePath = path.join(generateLocalFileName(url), pathToDir);
-  const resourceDirPath = path.join(generateResourceDirName(url), pathToDir);
+  const pageFileName = generateLocalFileName(url);
+  const pageFilePath = path.join(pageFileName, pathToDir);
+  const resourceDirName = generateResourceDirName(url);
+  const resourceDirPath = path.join(resourceDirName, pathToDir);
 
   const isLocal = (pathToResource) => {
     const fullUrl = new URL(pathToResource, baseUrl);
@@ -48,28 +49,35 @@ export default (urlString, pathToDir) => {
   return axios.get(url.href)
     .then((response) => {
       const $ = cheerio.load(response.data);
-      const links = Object.values(tags).reduce(
-        (acc, { tagName, linkAttr }) => [...acc, ...getLinks($, tagName, linkAttr)],
+      const resourcePaths = Object.keys(tags).reduce(
+        (acc, tagName) => [...acc, ...getResourcePaths($, tagName)],
         [],
       );
-      const localLinks = links.filter(({ link }) => isLocal(link));
-      console.log(localLinks.map(({ link }) => link));
+      const uniqueResourcePaths = uniq(resourcePaths);
+      const uniqueLocalResourcePaths = uniqueResourcePaths.filter(isLocal);
+      console.log(uniqueLocalResourcePaths);
 
-      const resources = {};
-      localLinks.forEach(({ link, element }) => {
-        const localFileName = generateResourceFileName(link);
-        const fullUrl = new URL(link, baseUrl).href;
-        if (!resources[fullUrl]) {
-          resources[fullUrl] = {
-            localFileName,
-            fullUrl,
-            linkedElements: [element],
-          };
-        } else {
-          resources[fullUrl].linkedElements.push(element);
-        }
+      const resourceInfoObjs = uniqueLocalResourcePaths.map((resourcePath) => {
+        const dlLink = new URL(resourcePath, baseUrl).href;
+        const resourceFileName = generateResourceFileName(resourcePath);
+        const newLink = `${resourceDirName}/${resourceFileName}`;
+        return {
+          resourcePath,
+          dlLink,
+          resourceFileName,
+          newLink,
+        };
       });
-      console.log(resources);
-      
-    });
+      console.log(resourceInfoObjs);
+
+      const loadResource = (resourceInfoObj) => {
+        const { dlLink } = resourceInfoObj;
+        return axios.get(dlLink).then(({ data }) => ({
+          ...resourceInfoObj,
+          data,
+        }));
+      };
+      return Promise.all(resourceInfoObjs.map(loadResource));
+    })
+    .then(console.log);
 };
