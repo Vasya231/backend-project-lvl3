@@ -113,7 +113,10 @@ export default (urlString, pathToDir) => {
     .then(() => {
       const savePagePromise = fs.writeFile(pageFilePath, $().html);
       const saveResourcePromises = Object.values(localResourceMap).map(
-        ({ resourceFileName, data }) => fs.writeFile(path.join(resourceDirPath, resourceFileName), data),
+        ({ resourceFileName, data }) => fs.writeFile(
+          path.join(resourceDirPath, resourceFileName),
+          data,
+        ),
       );
       return Promise.all([savePagePromise, ...saveResourcePromises]);
     });
