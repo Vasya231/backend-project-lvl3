@@ -101,7 +101,9 @@ export default (urlString, pathToDir) => {
 
       const loadResource = (resourceProps) => {
         const { dlLink } = resourceProps;
-        return axios.get(dlLink).then(({ data }) => {
+        return axios.get(dlLink, {
+          responseType: 'arraybuffer',
+        }).then(({ data }) => {
           // eslint-disable-next-line no-param-reassign
           resourceProps.data = data;
           return true;
@@ -111,7 +113,7 @@ export default (urlString, pathToDir) => {
     })
     .then(() => fs.mkdir(resourceDirPath))
     .then(() => {
-      const savePagePromise = fs.writeFile(pageFilePath, $().html);
+      const savePagePromise = fs.writeFile(pageFilePath, $('*').html());
       const saveResourcePromises = Object.values(localResourceMap).map(
         ({ resourceFileName, data }) => fs.writeFile(
           path.join(resourceDirPath, resourceFileName),
