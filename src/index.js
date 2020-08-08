@@ -5,7 +5,7 @@ import nodeAdapter from 'axios/lib/adapters/http';
 import cheerio from 'cheerio';
 import { uniq, keyBy } from 'lodash';
 
-import { generateLocalFileName, generateResourceDirName, generateResourceFileName } from './utils';
+import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './utils';
 
 const tags = {
   img: {
@@ -27,6 +27,8 @@ export default (urlString, pathToDir) => {
   if (testMode === 'true') {
     axios.defaults.adapter = nodeAdapter;
   }
+
+  const generateResourceFileName = getResourceFilenameGenerationFunction();
 
   const url = new URL(urlString);
   const baseUrl = url.origin;
@@ -70,8 +72,8 @@ export default (urlString, pathToDir) => {
 
   const generateResourceMap = (resourcePaths) => {
     const resourceProps = resourcePaths.map((resourcePath) => {
-      const dlLink = new URL(resourcePath, baseUrl).href;
-      const resourceFileName = generateResourceFileName(resourcePath);
+      const dlLink = new URL(resourcePath, baseUrl);
+      const resourceFileName = generateResourceFileName(dlLink);
       const newLink = `${resourceDirName}/${resourceFileName}`;
       return {
         resourcePath,
@@ -101,7 +103,7 @@ export default (urlString, pathToDir) => {
 
       const loadResource = (resourceProps) => {
         const { dlLink } = resourceProps;
-        return axios.get(dlLink, {
+        return axios.get(dlLink.href, {
           responseType: 'arraybuffer',
         }).then(({ data }) => {
           // eslint-disable-next-line no-param-reassign
