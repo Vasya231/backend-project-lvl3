@@ -4,6 +4,7 @@ import axios from 'axios';
 import nodeAdapter from 'axios/lib/adapters/http';
 import cheerio from 'cheerio';
 import { uniq, keyBy } from 'lodash';
+import beautify from 'js-beautify';
 
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './utils';
 
@@ -115,7 +116,11 @@ export default (urlString, pathToDir) => {
     })
     .then(() => fs.mkdir(resourceDirPath))
     .then(() => {
-      const savePagePromise = fs.writeFile(pageFilePath, $('*').html());
+      const renderedHtml = beautify.html(
+        $.root().html(),
+        { indent_size: 2 },
+      );
+      const savePagePromise = fs.writeFile(pageFilePath, renderedHtml, 'utf-8');
       const saveResourcePromises = Object.values(localResourceMap).map(
         ({ resourceFileName, data }) => fs.writeFile(
           path.join(resourceDirPath, resourceFileName),
