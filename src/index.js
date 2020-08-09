@@ -5,6 +5,7 @@ import nodeAdapter from 'axios/lib/adapters/http';
 import cheerio from 'cheerio';
 import { uniq, keyBy } from 'lodash';
 import beautify from 'js-beautify';
+import 'axios-debug-log';
 
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './utils';
 
