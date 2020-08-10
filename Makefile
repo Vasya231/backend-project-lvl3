@@ -22,7 +22,7 @@ test:
 	DEBUG=page-loader* TEST_MODE=true npm test
 
 coverage:
-	npx jest --coverage
+	TEST_MODE=true npx jest --coverage
 
 watch:
 	npx jest --watch
