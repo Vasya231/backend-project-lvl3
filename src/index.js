@@ -32,18 +32,24 @@ const config = { timeout: 3000 };
 
 const axiosGet = (url, options = {}) => {
   const abort = CancelToken.source();
-  const id = setTimeout(
+  const timeoutId = setTimeout(
     () => {
-      abort.cancel(`Timeout of ${config.timeout}ms.`);
-      logMain('REQUEST CANCELLED');
+      abort.cancel(`Timeout of ${config.timeout}ms exceeded.`);
+      logMain(`Request ${url} was cancelled due to timeout.`);
     },
     config.timeout,
   );
   return axios
     .get(url, { cancelToken: abort.token, ...options })
     .then((response) => {
-      clearTimeout(id);
+      clearTimeout(timeoutId);
       return response;
+    })
+    .catch((e) => {
+      if (e.message !== `Timeout of ${config.timeout}ms exceeded.`) {
+        clearTimeout(timeoutId);
+      }
+      throw (e);
     });
 };
 
