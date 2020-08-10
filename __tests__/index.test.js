@@ -61,5 +61,12 @@ test('Negative(network): wrong ip', async () => {
   /* nock('https://nonexistanthost')
     .get('/')
     .replyWithError('!!!'); */
-  await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow('Timeout of 3000ms.');
+  expect.assertions(1);
+  try {
+    await downloadPage('https://169.254.0.1', tmpDir);
+  } catch (e) {
+    // eslint-disable-next-line jest/no-try-expect
+    expect(e.message).toBe('Timeout of 3000ms exceeded.');
+  }
+  // await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow('Timeout of 3000ms exceeded.'); - не работает
 });
