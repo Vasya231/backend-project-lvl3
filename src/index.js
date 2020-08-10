@@ -1,7 +1,5 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import axios from 'axios';
-import nodeAdapter from 'axios/lib/adapters/http';
 import cheerio from 'cheerio';
 import { uniq, keyBy } from 'lodash';
 import beautify from 'js-beautify';
@@ -9,6 +7,7 @@ import debug from 'debug';
 
 import 'axios-debug-log';
 
+import axios, { CancelToken } from './lib/axios';
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
 
 const tags = {
@@ -29,21 +28,40 @@ const tags = {
 const logMain = debug('page-loader');
 const logDom = debug('page-loader.dom');
 
-export default (pageAddress, pathToDir) => {
-  const testMode = process.env.TEST_MODE;
-  if (testMode === 'true') {
-    axios.defaults.adapter = nodeAdapter;
-  }
+const config = { timeout: 3000 };
 
+const axiosGet = (url, options = {}) => {
+  const abort = CancelToken.source();
+  const id = setTimeout(
+    () => {
+      abort.cancel(`Timeout of ${config.timeout}ms.`);
+      logMain('REQUEST CANCELLED');
+    },
+    config.timeout,
+  );
+  return axios
+    .get(url, { cancelToken: abort.token, ...options })
+    .then((response) => {
+      clearTimeout(id);
+      return response;
+    });
+};
+
+export default (pageAddress, pathToDir) => {
   const generateResourceFileName = getResourceFilenameGenerationFunction();
 
-  logMain(`Parsing page address: ${pageAddress}`);
+  logMain('Validating arguments.');
+  if (typeof pathToDir !== 'string') {
+    return Promise.reject(new Error('Path to directory must be a string.'));
+  }
   try {
     // eslint-disable-next-line no-new
     new URL(pageAddress);
   } catch (e) {
     return Promise.reject(e);
   }
+
+  logMain(`Parsing page address: ${pageAddress}`);
   const pageUrl = new URL(pageAddress);
   const baseUrl = pageUrl.origin;
   const pageFileName = generateLocalFileName(pageUrl);
@@ -103,7 +121,7 @@ export default (pageAddress, pathToDir) => {
 
   const generateLoadResourcePromise = (resourceProps) => {
     const { dlLink } = resourceProps;
-    return axios.get(dlLink.href, {
+    return axiosGet(dlLink.href, {
       responseType: 'arraybuffer',
     }).then(({ data }) => {
       // eslint-disable-next-line no-param-reassign
@@ -114,7 +132,7 @@ export default (pageAddress, pathToDir) => {
   };
 
   logMain('Starting to download the page.');
-  return axios.get(pageUrl.href)
+  return axiosGet(pageUrl.href)
     .then((response) => {
       logMain('Page loaded, parsing html.');
       $ = cheerio.load(response.data);
