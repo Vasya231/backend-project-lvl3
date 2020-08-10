@@ -19,7 +19,7 @@ lintfix:
 	npx eslint . --fix
 
 test:
-	DEBUG=nock.*,axios npm test
+	DEBUG=nock.*,axios,page-loader* npm test
 
 coverage:
 	npx jest --coverage
