@@ -58,9 +58,6 @@ test('Negative(http): Page does not exist', async () => {
 });
 
 test('Negative(network): wrong ip', async () => {
-  /* nock('https://nonexistanthost')
-    .get('/')
-    .replyWithError('!!!'); */
   expect.assertions(1);
   try {
     await downloadPage('https://169.254.0.1', tmpDir);
@@ -69,4 +66,8 @@ test('Negative(network): wrong ip', async () => {
     expect(e.message).toBe('Timeout of 3000ms exceeded.');
   }
   // await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow('Timeout of 3000ms exceeded.'); - не работает
+});
+
+test('Negative(dns): host doesn\'t exist', async () => {
+  await expect(downloadPage('https://kjadfhkdjfh.dfjj', tmpDir)).rejects.toThrow('getaddrinfo ENOTFOUND kjadfhkdjfh.dfjj');
 });
