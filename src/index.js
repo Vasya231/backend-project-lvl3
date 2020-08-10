@@ -9,7 +9,7 @@ import debug from 'debug';
 
 import 'axios-debug-log';
 
-import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './utils';
+import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
 
 const tags = {
   img: {
@@ -132,8 +132,8 @@ export default (urlString, pathToDir) => {
       return Promise.all(Object.values(localResourceMap).map(generateLoadResourcePromise));
     })
     .then(() => {
-      fs.mkdir(resourceDirPath);
-      writeLog(`Created directory ${resourceDirPath}`);
+      writeLog(`Creating directory ${resourceDirPath}`);
+      return fs.mkdir(resourceDirPath);
     })
     .then(() => {
       const renderedHtml = beautify.html(
