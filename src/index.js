@@ -10,7 +10,7 @@ import 'axios-debug-log';
 import axios, { CancelToken } from './lib/axios';
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
 
-const tags = {
+const tagProps = {
   img: {
     tagName: 'img',
     linkAttr: 'src',
@@ -27,6 +27,8 @@ const tags = {
 
 const logMain = debug('page-loader');
 const logDom = debug('page-loader.dom');
+const logFs = debug('page-loader.file-system');
+const logNetwork = debug('page-loader.network');
 
 const config = { timeout: 3000 };
 
@@ -35,7 +37,7 @@ const axiosGet = (url, options = {}) => {
   const timeoutId = setTimeout(
     () => {
       abort.cancel(`Timeout of ${config.timeout}ms exceeded.`);
-      logMain(`Request ${url} was cancelled due to timeout.`);
+      logNetwork(`Request ${url} was cancelled due to timeout.`);
     },
     config.timeout,
   );
@@ -53,9 +55,86 @@ const axiosGet = (url, options = {}) => {
     });
 };
 
-export default (pageAddress, pathToDir) => {
-  const generateResourceFileName = getResourceFilenameGenerationFunction();
+const getLocalResourcesPaths = ($, pageUrl) => {
+  const isLocal = (pathToResource) => {
+    const { origin, hostname } = pageUrl;
+    const resourceUrl = new URL(pathToResource, origin);
+    return (resourceUrl.hostname === hostname);
+  };
 
+  const getResourcesPathsFromTag = (tagName) => {
+    logDom(`Extracting resource path from ${tagName} elements.`);
+    const { linkAttr } = tagProps[tagName];
+    const links = $(tagName).map((i, element) => $(element).attr(linkAttr)).get();
+    return links.filter((resourcePath) => (resourcePath !== undefined));
+  };
+
+  const tags = Object.keys(tagProps);
+  logDom(`Extracting links to local resources from tags: ${tags}`);
+  const resourcePaths = tags.reduce(
+    (acc, tagName) => [...acc, ...getResourcesPathsFromTag(tagName)],
+    [],
+  );
+  const uniqueResourcePaths = uniq(resourcePaths);
+  return uniqueResourcePaths.filter(isLocal);
+};
+
+const transformLinks = ($, resourceMap) => {
+  const transformLinksInTag = (tagName) => {
+    logDom(`Transforming ${tagName} elements.`);
+    const { linkAttr } = tagProps[tagName];
+    $(tagName).each((i, element) => {
+      const resourcePath = $(element).attr(linkAttr);
+      if (!resourcePath) {
+        return;
+      }
+      const resourceProps = resourceMap[resourcePath];
+      if (!resourceProps) {
+        return;
+      }
+      const { newLink } = resourceProps;
+      logDom(`Transformed ${cheerio.html($(element))}`);
+      $(element).attr(linkAttr, newLink);
+    });
+  };
+
+  const tags = Object.keys(tagProps);
+  logDom(`Transforming links to resources in tags: ${tags}`);
+  tags.forEach(
+    (tagName) => transformLinksInTag(tagName),
+  );
+};
+
+const generateResourceMap = (resourcePaths, resourceDirName, pageUrl) => {
+  const { origin } = pageUrl;
+  const generateResourceFileName = getResourceFilenameGenerationFunction();
+  const resourceProps = resourcePaths.map((resourcePath) => {
+    const dlLink = new URL(resourcePath, origin);
+    const resourceFileName = generateResourceFileName(dlLink);
+    const newLink = `${resourceDirName}/${resourceFileName}`;
+    return {
+      resourcePath,
+      dlLink,
+      newLink,
+      resourceFileName,
+    };
+  });
+  return keyBy(resourceProps, ({ resourcePath }) => resourcePath);
+};
+
+const generateLoadResourcePromise = (resourceProps) => {
+  const { dlLink } = resourceProps;
+  return axiosGet(dlLink.href, {
+    responseType: 'arraybuffer',
+  }).then(({ data }) => {
+    // eslint-disable-next-line no-param-reassign
+    resourceProps.data = data;
+    logNetwork(`${dlLink} successfully loaded.`);
+    return true;
+  });
+};
+
+export default (pageAddress, pathToDir) => {
   logMain('Validating arguments.');
   if (typeof pathToDir !== 'string') {
     return Promise.reject(new Error('Path to directory must be a string.'));
@@ -82,89 +161,27 @@ export default (pageAddress, pathToDir) => {
   let localResourceMap;
   let $;
 
-  const isLocal = (pathToResource) => {
-    const fullUrl = new URL(pathToResource, baseUrl);
-    return (fullUrl.hostname === pageUrl.hostname);
-  };
-
-  const transformLinks = (tagName, resourceMap) => {
-    const { linkAttr } = tags[tagName];
-    $(tagName).each((i, element) => {
-      const resourcePath = $(element).attr(linkAttr);
-      if (!resourcePath) {
-        return;
-      }
-      const resourceProps = resourceMap[resourcePath];
-      if (!resourceProps) {
-        return;
-      }
-      const { newLink } = resourceProps;
-      logDom(`Transformed ${cheerio.html($(element))}`);
-      $(element).attr(linkAttr, newLink);
-    });
-  };
-
-  const getResourcePaths = (tagName) => {
-    const { linkAttr } = tags[tagName];
-    const links = $(tagName).map((i, element) => $(element).attr(linkAttr)).get();
-    return links.filter((resourcePath) => (resourcePath !== undefined));
-  };
-
-  const generateResourceMap = (resourcePaths) => {
-    const resourceProps = resourcePaths.map((resourcePath) => {
-      const dlLink = new URL(resourcePath, baseUrl);
-      const resourceFileName = generateResourceFileName(dlLink);
-      const newLink = `${resourceDirName}/${resourceFileName}`;
-      return {
-        resourcePath,
-        dlLink,
-        newLink,
-        resourceFileName,
-      };
-    });
-    return keyBy(resourceProps, ({ resourcePath }) => resourcePath);
-  };
-
-  const generateLoadResourcePromise = (resourceProps) => {
-    const { dlLink } = resourceProps;
-    return axiosGet(dlLink.href, {
-      responseType: 'arraybuffer',
-    }).then(({ data }) => {
-      // eslint-disable-next-line no-param-reassign
-      resourceProps.data = data;
-      logMain(`${dlLink} successfully loaded.`);
-      return true;
-    });
-  };
-
-  logMain('Starting to download the page.');
+  logNetwork('Start loading the page.');
   return axiosGet(pageUrl.href)
     .then((response) => {
-      logMain('Page loaded, parsing html.');
+      logNetwork('Page loaded.');
       $ = cheerio.load(response.data);
-      logMain('Html parsed, extracting paths to resources.');
-      const resourcePaths = Object.keys(tags).reduce(
-        (acc, tagName) => [...acc, ...getResourcePaths(tagName)],
-        [],
-      );
-      const uniqueResourcePaths = uniq(resourcePaths);
-      const uniqueLocalResourcePaths = uniqueResourcePaths.filter(isLocal);
+      logMain('Html parsed.');
+
+      const uniqueLocalResourcePaths = getLocalResourcesPaths($, pageUrl);
       logMain(`Extracted paths to local resources: ${uniqueLocalResourcePaths}`);
 
-      localResourceMap = generateResourceMap(uniqueLocalResourcePaths);
+      localResourceMap = generateResourceMap(uniqueLocalResourcePaths, resourceDirName, pageUrl);
       const renderedLocalResourceMap = JSON.stringify(localResourceMap, null, 2);
       logMain(`Generated local resources props: ${renderedLocalResourceMap}`);
 
-      logMain('Transforming links to local resources.');
-      Object.keys(tags).forEach(
-        (tagName) => transformLinks(tagName, localResourceMap),
-      );
+      transformLinks($, localResourceMap);
 
-      logMain('Downloading resources.');
+      logNetwork('Downloading resources.');
       return Promise.all(Object.values(localResourceMap).map(generateLoadResourcePromise));
     })
     .then(() => {
-      logMain(`Creating directory ${resourceDirPath}`);
+      logFs(`Creating directory ${resourceDirPath}`);
       return fs.mkdir(resourceDirPath);
     })
     .then(() => {
@@ -174,12 +191,12 @@ export default (pageAddress, pathToDir) => {
       );
       logMain('Generated modified page html.');
       const savePagePromise = fs.writeFile(pageFilePath, renderedHtml, 'utf-8')
-        .then(() => logMain(`Main page file saved, path: ${pageFilePath}`));
+        .then(() => logFs(`Main page file saved, path: ${pageFilePath}`));
       const saveResourcePromises = Object.values(localResourceMap).map(
         ({ resourceFileName, data }) => {
           const resourceFilePath = path.join(resourceDirPath, resourceFileName);
           return fs.writeFile(resourceFilePath, data)
-            .then(() => logMain(`Resource file saved, path: ${resourceFilePath}`));
+            .then(() => logFs(`Resource file saved, path: ${resourceFilePath}`));
         },
       );
       return Promise.all([savePagePromise, ...saveResourcePromises]);

@@ -1,6 +1,6 @@
 const transformString = (str) => str.replace(/\W/, '-');
 
-export const parsePathname = (pathname) => {
+const parsePathname = (pathname) => {
   const pathnameParts = pathname.split('/').filter((part) => part !== '');
   if (pathname.endsWith('/')) {
     return {
