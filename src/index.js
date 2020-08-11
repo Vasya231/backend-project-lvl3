@@ -49,7 +49,7 @@ const axiosGet = (url, options = {}) => {
       if (e.message !== `Timeout of ${config.timeout}ms exceeded.`) {
         clearTimeout(timeoutId);
       }
-      throw (e);
+      return Promise.reject(e);
     });
 };
 

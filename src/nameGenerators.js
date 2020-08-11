@@ -1,10 +1,4 @@
-const transformString = (str) => {
-  const chars = str.split('');
-  const transforemedChars = chars.map(
-    (char) => (char.match(/\w/) ? char : '-'),
-  );
-  return transforemedChars.join('');
-};
+const transformString = (str) => str.replace(/\W/, '-');
 
 export const parsePathname = (pathname) => {
   const pathnameParts = pathname.split('/').filter((part) => part !== '');
