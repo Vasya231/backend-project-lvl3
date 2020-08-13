@@ -4,11 +4,13 @@ import cheerio from 'cheerio';
 import { uniq, keyBy } from 'lodash';
 import beautify from 'js-beautify';
 import debug from 'debug';
+import axios from 'axios';
+import nodeAdapter from 'axios/lib/adapters/http';
 
 import 'axios-debug-log';
 
-import axios, { CancelToken } from './lib/axios';
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
+import friendifyFSError from './friendifyError';
 
 const tagProps = {
   img: {
@@ -33,7 +35,7 @@ const logNetwork = debug('page-loader.network');
 const config = { timeout: 3000 };
 
 const axiosGet = (url, options = {}) => {
-  const abort = CancelToken.source();
+  const abort = axios.CancelToken.source();
   const timeoutId = setTimeout(
     () => {
       abort.cancel(`Timeout of ${config.timeout}ms exceeded.`);
@@ -134,7 +136,7 @@ const generateLoadResourcePromise = (resourceProps) => {
   });
 };
 
-export default (pageAddress, pathToDir) => {
+export default (pageAddress, pathToDir, testMode = false) => {
   logMain('Validating arguments.');
   if (typeof pathToDir !== 'string') {
     return Promise.reject(new Error('Path to directory must be a string.'));
@@ -144,6 +146,10 @@ export default (pageAddress, pathToDir) => {
     new URL(pageAddress);
   } catch (e) {
     return Promise.reject(e);
+  }
+
+  if (testMode) {
+    axios.defaults.adapter = nodeAdapter;
   }
 
   logMain(`Parsing page address: ${pageAddress}`);
@@ -200,5 +206,22 @@ export default (pageAddress, pathToDir) => {
         },
       );
       return Promise.all([savePagePromise, ...saveResourcePromises]);
+    })
+    .catch((e) => {
+      if (e.message !== 'getaddrinfo ENOTFOUND kjadfhkdjfh.dfjj') {
+        return Promise.reject(e);
+      }
+      console.log(e.request);
+      // console.log(e.response);
+      console.log(e.isAxiosError);
+      console.log(e.errno);
+      console.log(e.code);
+      console.log(e.name);
+      console.log(e.path);
+      console.log(e.syscall);
+      const { userFriendlyMessage } = friendifyFSError(e);
+      console.log(userFriendlyMessage);
+      console.log(e.message);
+      return Promise.reject(e);
     });
 };

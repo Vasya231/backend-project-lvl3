@@ -19,10 +19,10 @@ lintfix:
 	npx eslint . --fix
 
 test:
-	DEBUG=page-loader* TEST_MODE=true npm test
+	DEBUG=page-loader* npm test
 
 coverage:
-	TEST_MODE=true npx jest --coverage
+	npx jest --coverage
 
 watch:
 	npx jest --watch
