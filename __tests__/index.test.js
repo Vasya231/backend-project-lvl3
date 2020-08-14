@@ -79,7 +79,7 @@ describe('Negative testing: file system errors', () => {
   test('File already exists in place of directory', async () => {
     mockWorkingPage('https://testhostfileexists');
     const existingFilePath = path.join(tmpDir, 'testhostfileexists_files');
-    const expectedErrorMessage = `Cannot create directory '${existingFilePath}'. Reason: file already exists`;    
+    const expectedErrorMessage = `Cannot create directory '${existingFilePath}'. Reason: file already exists`;
     await fs.writeFile(existingFilePath, ' ');
     await expect(downloadPageTest('https://testhostfileexists', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
