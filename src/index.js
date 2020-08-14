@@ -10,7 +10,7 @@ import nodeAdapter from 'axios/lib/adapters/http';
 import 'axios-debug-log';
 
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
-import friendifyFSError from './friendifyError';
+import friendifyError from './friendifyError';
 
 const tagProps = {
   img: {
@@ -45,9 +45,10 @@ const validateArguments = (pageAddress, pathToDir) => {
 
 const axiosGet = (url, options = {}) => {
   const abort = axios.CancelToken.source();
+  const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${config.timeout}ms exceeded.`;
   const timeoutId = setTimeout(
     () => {
-      abort.cancel(`Timeout of ${config.timeout}ms exceeded.`);
+      abort.cancel(errorMessage);
       logNetwork(`Request ${url} was cancelled due to timeout.`);
     },
     config.timeout,
@@ -59,7 +60,7 @@ const axiosGet = (url, options = {}) => {
       return response;
     })
     .catch((e) => {
-      if (e.message !== `Timeout of ${config.timeout}ms exceeded.`) {
+      if (e.message !== errorMessage) {
         clearTimeout(timeoutId);
       }
       return Promise.reject(e);
@@ -207,21 +208,5 @@ export default (pageAddress, pathToDir, testMode = false) => {
       );
       return Promise.all([savePagePromise, ...saveResourcePromises]);
     })
-    .catch((e) => {
-      if (e.message !== 'getaddrinfo ENOTFOUND kjadfhkdjfh.dfjj') {
-        return Promise.reject(e);
-      }
-      console.log(e.request);
-      // console.log(e.response);
-      console.log(e.isAxiosError);
-      console.log(e.errno);
-      console.log(e.code);
-      console.log(e.name);
-      console.log(e.path);
-      console.log(e.syscall);
-      const { userFriendlyMessage } = friendifyFSError(e);
-      console.log(userFriendlyMessage);
-      console.log(e.message);
-      return Promise.reject(e);
-    });
+    .catch((e) => Promise.reject(friendifyError(e)));
 };
