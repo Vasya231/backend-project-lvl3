@@ -59,6 +59,30 @@ describe('Negative testing: invalid arguments', () => {
   });
 });
 
+describe('Negative testing: file system errors', () => {
+  test('Output directory doesn\'t exist', async () => {
+    mockWorkingPage('https://testhostbaddir');
+    const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-7N9yse/whatever/testhostbaddir_files\'. Reason: no such file or directory';
+    const nonexistantDirPath = path.join(tmpDir, '/whatever');
+    await expect(downloadPageTest('https://testhostbaddir', nonexistantDirPath)).rejects.toThrow(expectedErrorMessage);
+  });
+
+  test('No permissions', async () => {
+    mockWorkingPage('https://testhostnorights');
+    const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-w2QeYZ/testhostnorights_files\'. Reason: permission denied';
+    await fs.chmod(tmpDir, 0);
+    await expect(downloadPageTest('https://testhostnorights', tmpDir)).rejects.toThrow(expectedErrorMessage);
+  });
+
+  test('File already exists', async () => {
+    mockWorkingPage('https://testhostfileexists');
+    const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-QMCuvT/testhostfileexists_files\'. Reason: file already exists';
+    const existingFilePath = path.join(tmpDir, 'testhostfileexists_files');
+    await fs.writeFile(existingFilePath, ' ');
+    await expect(downloadPageTest('https://testhostfileexists', tmpDir)).rejects.toThrow(expectedErrorMessage);
+  });
+});
+
 test('Negative(http): Page does not exist', async () => {
   nock('https://testhost404')
     .get('/')
@@ -86,20 +110,4 @@ test('Negative(network): no answer', async () => {
 
 test('Negative(dns): host doesn\'t exist', async () => {
   await expect(downloadPageTest('https://kjadfhkdjfh.dfjj', tmpDir)).rejects.toThrow('Failed to resolve hostname: kjadfhkdjfh.dfjj');
-});
-
-test('Negative(file system): output directory doesn\'t exist', async () => {
-  mockWorkingPage('https://testhostbaddir');
-  const nonexistantDirPath = path.join(tmpDir, '/whatever');
-  await expect(downloadPageTest('https://testhostbaddir', nonexistantDirPath)).rejects.toThrow('Request failed with status code 404');
-});
-
-test('Negative(file system): no permission', async () => {
-  mockWorkingPage('https://testhostnorights');
-  await fs.chmod(tmpDir, 0);
-  const expectedError = {
-    errno: -13,
-    message: `EACCES: permission denied mkdir '${tmpDir}/testhostnorights_files'`,
-  };
-  await expect(downloadPageTest('https://testhostnorights', tmpDir)).rejects.toMatchObject(expectedError);
 });
