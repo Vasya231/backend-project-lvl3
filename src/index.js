@@ -60,10 +60,13 @@ const axiosGet = (url, options = {}) => {
       return response;
     })
     .catch((e) => {
-      if (e.message !== errorMessage) {
+      const { message } = e;
+      if (message !== errorMessage) {
         clearTimeout(timeoutId);
+        return Promise.reject(e);
       }
-      return Promise.reject(e);
+      const error = new Error(message);
+      return Promise.reject(error);
     });
 };
 

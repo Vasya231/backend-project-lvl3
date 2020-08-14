@@ -104,15 +104,8 @@ describe('Negative testing: network errors', () => {
   });
 
   test('No answer from host', async () => {
-    expect.assertions(1);
     const expectedErrorMessage = 'Cannot load \'https://169.254.0.1/\'. Reason: Timeout of 3000ms exceeded.';
-    try {
-      await downloadPageTest('https://169.254.0.1', tmpDir);
-    } catch (e) {
-      // eslint-disable-next-line jest/no-try-expect
-      expect(e.message).toBe(expectedErrorMessage);
-    }
-    // await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow(expectedErrorMessage); - не работает
+    await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 
   test('Host doesn\'t exist', async () => {
