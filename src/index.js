@@ -61,7 +61,7 @@ const axiosGet = (url, options = {}) => {
     })
     .catch((e) => {
       const { message } = e;
-      if (message !== errorMessage) {
+      if (!axios.isCancel(e)) {
         clearTimeout(timeoutId);
         return Promise.reject(e);
       }
