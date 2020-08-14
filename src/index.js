@@ -55,18 +55,16 @@ const axiosGet = (url, options = {}) => {
   );
   return axios
     .get(url, { cancelToken: abort.token, ...options })
-    .then((response) => {
-      clearTimeout(timeoutId);
-      return response;
-    })
     .catch((e) => {
       const { message } = e;
       if (!axios.isCancel(e)) {
-        clearTimeout(timeoutId);
         return Promise.reject(e);
       }
       const error = new Error(message);
       return Promise.reject(error);
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
     });
 };
 
