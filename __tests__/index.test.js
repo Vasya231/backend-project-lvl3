@@ -62,24 +62,35 @@ describe('Negative testing: invalid arguments', () => {
 describe('Negative testing: file system errors', () => {
   test('Output directory doesn\'t exist', async () => {
     mockWorkingPage('https://testhostbaddir');
-    const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-7N9yse/whatever/testhostbaddir_files\'. Reason: no such file or directory';
+    const pathToResources = path.join(tmpDir, '/whatever/testhostbaddir_files');
+    const expectedErrorMessage = `Cannot create directory '${pathToResources}'. Reason: no such file or directory`;
     const nonexistantDirPath = path.join(tmpDir, '/whatever');
     await expect(downloadPageTest('https://testhostbaddir', nonexistantDirPath)).rejects.toThrow(expectedErrorMessage);
   });
 
   test('No permissions', async () => {
     mockWorkingPage('https://testhostnorights');
-    const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-w2QeYZ/testhostnorights_files\'. Reason: permission denied';
+    const pathToResources = path.join(tmpDir, 'testhostnorights_files');
+    const expectedErrorMessage = `Cannot create directory '${pathToResources}'. Reason: permission denied`;
     await fs.chmod(tmpDir, 0);
     await expect(downloadPageTest('https://testhostnorights', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 
   test('File already exists in place of directory', async () => {
     mockWorkingPage('https://testhostfileexists');
-    const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-QMCuvT/testhostfileexists_files\'. Reason: file already exists';
     const existingFilePath = path.join(tmpDir, 'testhostfileexists_files');
+    const expectedErrorMessage = `Cannot create directory '${existingFilePath}'. Reason: file already exists`;    
     await fs.writeFile(existingFilePath, ' ');
     await expect(downloadPageTest('https://testhostfileexists', tmpDir)).rejects.toThrow(expectedErrorMessage);
+  });
+
+  test('File already exists and cant be rewritten', async () => {
+    mockWorkingPage('https://testhostnorewrite');
+    const pathToPage = path.join(tmpDir, 'testhostnorewrite.html');
+    const expectedErrorMessage = `Cannot open file '${pathToPage}'. Reason: permission denied`;
+    await fs.writeFile(pathToPage, ' ');
+    await fs.chmod(pathToPage, 0);
+    await expect(downloadPageTest('https://testhostnorewrite', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 });
 
@@ -88,13 +99,13 @@ describe('Negative testing: network errors', () => {
     nock('https://testhost404')
       .get('/')
       .reply(404);
-    const expectedErrorMessage = 'Cannot load \'https://testhost404\'. Reason: Request failed with status code 404';
+    const expectedErrorMessage = 'Cannot load \'https://testhost404/\'. Reason: Request failed with status code 404';
     await expect(downloadPageTest('https://testhost404', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 
   test('No answer from host', async () => {
     expect.assertions(1);
-    const expectedErrorMessage = 'Cannot load \'https://169.254.0.1\'. Reason: Timeout of 3000ms exceeded.';
+    const expectedErrorMessage = 'Cannot load \'https://169.254.0.1/\'. Reason: Timeout of 3000ms exceeded.';
     try {
       await downloadPageTest('https://169.254.0.1', tmpDir);
     } catch (e) {
@@ -105,7 +116,7 @@ describe('Negative testing: network errors', () => {
   });
 
   test('Host doesn\'t exist', async () => {
-    const expectedErrorMessage = 'Cannot resolve hostname \'https://kjadfhkdjfh.dfjj\'. Reason: DNS lookup failed';
+    const expectedErrorMessage = 'Cannot resolve hostname \'https://kjadfhkdjfh.dfjj/\'. Reason: DNS lookup failed';
     await expect(downloadPageTest('https://kjadfhkdjfh.dfjj', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 
@@ -113,7 +124,7 @@ describe('Negative testing: network errors', () => {
     nock('https://testhostnocode')
       .get('/')
       .replyWithError('!!!');
-    const expectedErrorMessage = 'Cannot load \'https://testhostnocode\'. Reason: !!!';
+    const expectedErrorMessage = 'Cannot load \'https://testhostnocode/\'. Reason: !!!';
     await expect(downloadPageTest('https://testhostnocode', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 });
