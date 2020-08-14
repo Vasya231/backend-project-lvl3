@@ -34,6 +34,15 @@ const logNetwork = debug('page-loader.network');
 
 const config = { timeout: 3000 };
 
+const validateArguments = (pageAddress, pathToDir) => {
+  logMain('Validating arguments.');
+  if (typeof pathToDir !== 'string') {
+    throw new Error('Path to directory must be a string.');
+  }
+  // eslint-disable-next-line no-new
+  new URL(pageAddress);
+};
+
 const axiosGet = (url, options = {}) => {
   const abort = axios.CancelToken.source();
   const timeoutId = setTimeout(
@@ -137,16 +146,7 @@ const generateLoadResourcePromise = (resourceProps) => {
 };
 
 export default (pageAddress, pathToDir, testMode = false) => {
-  logMain('Validating arguments.');
-  if (typeof pathToDir !== 'string') {
-    return Promise.reject(new Error('Path to directory must be a string.'));
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(pageAddress);
-  } catch (e) {
-    return Promise.reject(e);
-  }
+  validateArguments(pageAddress, pathToDir);
 
   if (testMode) {
     axios.defaults.adapter = nodeAdapter;

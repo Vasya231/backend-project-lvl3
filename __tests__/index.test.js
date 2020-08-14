@@ -49,12 +49,14 @@ test('Positive', async () => {
   expect(actualData).toEqual(expectedData);
 });
 
-test('Negative: Invalid directory name', async () => {
-  await expect(downloadPageTest('https://testhost1.ru', {})).rejects.toThrow('Path to directory must be a string.');
-});
+describe('Negative testing: invalid arguments', () => {
+  test('Invalid directory name', () => {
+    expect(() => downloadPageTest('https://testhost1.ru', {})).toThrow('Path to directory must be a string.');
+  });
 
-test('Negative: Invalid page URL', async () => {
-  await expect(downloadPageTest('xfdgrh', tmpDir)).rejects.toThrow('Invalid URL: xfdgrh');
+  test('Negative: Invalid page URL', () => {
+    expect(() => downloadPageTest('xfdgrh', tmpDir)).toThrow('Invalid URL: xfdgrh');
+  });
 });
 
 test('Negative(http): Page does not exist', async () => {
