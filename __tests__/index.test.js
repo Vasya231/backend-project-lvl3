@@ -74,7 +74,7 @@ describe('Negative testing: file system errors', () => {
     await expect(downloadPageTest('https://testhostnorights', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
 
-  test('File already exists', async () => {
+  test('File already exists in place of directory', async () => {
     mockWorkingPage('https://testhostfileexists');
     const expectedErrorMessage = 'Cannot create directory \'/tmp/page-loader-QMCuvT/testhostfileexists_files\'. Reason: file already exists';
     const existingFilePath = path.join(tmpDir, 'testhostfileexists_files');
@@ -83,31 +83,37 @@ describe('Negative testing: file system errors', () => {
   });
 });
 
-test('Negative(http): Page does not exist', async () => {
-  nock('https://testhost404')
-    .get('/')
-    .reply(404);
-  await expect(downloadPageTest('https://testhost404', tmpDir)).rejects.toThrow('Request failed with status code 404');
-});
+describe('Negative testing: network errors', () => {
+  test('Page does not exist', async () => {
+    nock('https://testhost404')
+      .get('/')
+      .reply(404);
+    const expectedErrorMessage = 'Cannot load \'https://testhost404\'. Reason: Request failed with status code 404';
+    await expect(downloadPageTest('https://testhost404', tmpDir)).rejects.toThrow(expectedErrorMessage);
+  });
 
-test('Negative(http): Error with no code', async () => {
-  nock('https://testhostnocode')
-    .get('/')
-    .replyWithError('!!!');
-  await expect(downloadPageTest('https://testhostnocode', tmpDir)).rejects.toThrow('!!!');
-});
+  test('No answer from host', async () => {
+    expect.assertions(1);
+    const expectedErrorMessage = 'Cannot load \'https://169.254.0.1\'. Reason: Timeout of 3000ms exceeded.';
+    try {
+      await downloadPageTest('https://169.254.0.1', tmpDir);
+    } catch (e) {
+      // eslint-disable-next-line jest/no-try-expect
+      expect(e.message).toBe(expectedErrorMessage);
+    }
+    // await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow(expectedErrorMessage); - не работает
+  });
 
-test('Negative(network): no answer', async () => {
-  expect.assertions(1);
-  try {
-    await downloadPageTest('https://169.254.0.1', tmpDir);
-  } catch (e) {
-    // eslint-disable-next-line jest/no-try-expect
-    expect(e.message).toBe('Timeout of 3000ms exceeded.');
-  }
-  // await expect(downloadPage('https://169.254.0.1', tmpDir)).rejects.toThrow('Timeout of 3000ms exceeded.'); - не работает
-});
+  test('Host doesn\'t exist', async () => {
+    const expectedErrorMessage = 'Cannot resolve hostname \'https://kjadfhkdjfh.dfjj\'. Reason: DNS lookup failed';
+    await expect(downloadPageTest('https://kjadfhkdjfh.dfjj', tmpDir)).rejects.toThrow(expectedErrorMessage);
+  });
 
-test('Negative(dns): host doesn\'t exist', async () => {
-  await expect(downloadPageTest('https://kjadfhkdjfh.dfjj', tmpDir)).rejects.toThrow('Failed to resolve hostname: kjadfhkdjfh.dfjj');
+  test('Server replied with an error', async () => {
+    nock('https://testhostnocode')
+      .get('/')
+      .replyWithError('!!!');
+    const expectedErrorMessage = 'Cannot load \'https://testhostnocode\'. Reason: !!!';
+    await expect(downloadPageTest('https://testhostnocode', tmpDir)).rejects.toThrow(expectedErrorMessage);
+  });
 });
