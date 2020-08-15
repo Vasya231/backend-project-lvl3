@@ -11,7 +11,13 @@ import 'axios-debug-log';
 
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
 import friendifyError from './friendifyError';
-import execute from './execute';
+import getPromiseRunner from './promiseRunners';
+
+const defaultConfig = {
+  testMode: false,
+  timeout: 3000,
+  promiseRunner: 'default',
+};
 
 const tagProps = {
   img: {
@@ -33,40 +39,16 @@ const logDom = debug('page-loader.dom');
 const logFs = debug('page-loader.file-system');
 const logNetwork = debug('page-loader.network');
 
-const config = { timeout: 3000 };
-
-const validateArguments = (pageAddress, pathToDir) => {
+const validateArguments = (pageAddress, pathToDir, userConfig) => {
   logMain('Validating arguments.');
   if (typeof pathToDir !== 'string') {
     throw new Error('Path to directory must be a string.');
   }
+  if (typeof userConfig !== 'object') {
+    throw new Error('Config must be an object.');
+  }
   // eslint-disable-next-line no-new
   new URL(pageAddress);
-};
-
-const axiosGet = (url, options = {}) => {
-  const abort = axios.CancelToken.source();
-  const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${config.timeout}ms exceeded.`;
-  const timeoutId = setTimeout(
-    () => {
-      abort.cancel(errorMessage);
-      logNetwork(`Request ${url} was cancelled due to timeout.`);
-    },
-    config.timeout,
-  );
-  return axios
-    .get(url, { cancelToken: abort.token, ...options })
-    .catch((e) => {
-      const { message } = e;
-      if (!axios.isCancel(e)) {
-        return Promise.reject(e);
-      }
-      const error = new Error(message);
-      return Promise.reject(error);
-    })
-    .finally(() => {
-      clearTimeout(timeoutId);
-    });
 };
 
 const getLocalResourcesPaths = ($, pageUrl) => {
@@ -136,24 +118,53 @@ const generateResourceMap = (resourcePaths, resourceDirName, pageUrl) => {
   return keyBy(resourceProps, ({ resourcePath }) => resourcePath);
 };
 
-const generateLoadResourcePromise = (resourceProps) => {
-  const { dlLink } = resourceProps;
-  return axiosGet(dlLink.href, {
-    responseType: 'arraybuffer',
-  }).then(({ data }) => {
-    // eslint-disable-next-line no-param-reassign
-    resourceProps.data = data;
-    logNetwork(`${dlLink} successfully loaded.`);
-    return true;
-  });
-};
+export default (pageAddress, pathToDir, userConfig = defaultConfig) => {
+  validateArguments(pageAddress, pathToDir, userConfig);
 
-export default (pageAddress, pathToDir, testMode = false) => {
-  validateArguments(pageAddress, pathToDir);
+  const config = { ...defaultConfig, ...userConfig };
+
+  const axiosGet = (url, options = {}) => {
+    const abort = axios.CancelToken.source();
+    const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${config.timeout}ms exceeded.`;
+    const timeoutId = setTimeout(
+      () => {
+        abort.cancel(errorMessage);
+        logNetwork(`Request ${url} was cancelled due to timeout.`);
+      },
+      config.timeout,
+    );
+    return axios
+      .get(url, { cancelToken: abort.token, ...options })
+      .catch((e) => {
+        const { message } = e;
+        if (!axios.isCancel(e)) {
+          return Promise.reject(e);
+        }
+        const error = new Error(message);
+        return Promise.reject(error);
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+      });
+  };
+
+  const generateLoadResourcePromise = (resourceProps) => {
+    const { dlLink } = resourceProps;
+    return axiosGet(dlLink.href, {
+      responseType: 'arraybuffer',
+    }).then(({ data }) => {
+      // eslint-disable-next-line no-param-reassign
+      resourceProps.data = data;
+      logNetwork(`${dlLink} successfully loaded.`);
+      return true;
+    });
+  };
 
   const fullPathToDir = path.resolve(process.cwd(), pathToDir);
 
-  if (testMode) {
+  const execute = getPromiseRunner(config.promiseRunner);
+
+  if (config.testMode) {
     axios.defaults.adapter = nodeAdapter;
   }
 

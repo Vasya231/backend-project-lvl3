@@ -5,7 +5,11 @@ import nock from 'nock';
 
 import downloadPage from '../src/index';
 
-const downloadPageTest = (pageUrl, outputDir) => downloadPage(pageUrl, outputDir, true);
+const downloadPageTest = (pageUrl, outputDir) => downloadPage(
+  pageUrl,
+  outputDir,
+  { testMode: true },
+);
 
 const pathToInputData = (filename) => `${__dirname}/fixtures/inputData/${filename}`;
 const pathToExpectedData = (filename) => `${__dirname}/fixtures/expected/${filename}`;
