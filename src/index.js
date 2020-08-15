@@ -151,6 +151,8 @@ const generateLoadResourcePromise = (resourceProps) => {
 export default (pageAddress, pathToDir, testMode = false) => {
   validateArguments(pageAddress, pathToDir);
 
+  const fullPathToDir = path.resolve(process.cwd(), pathToDir);
+
   if (testMode) {
     axios.defaults.adapter = nodeAdapter;
   }
@@ -159,9 +161,9 @@ export default (pageAddress, pathToDir, testMode = false) => {
   const pageUrl = new URL(pageAddress);
   const baseUrl = pageUrl.origin;
   const pageFileName = generateLocalFileName(pageUrl);
-  const pageFilePath = path.join(pathToDir, pageFileName);
+  const pageFilePath = path.join(fullPathToDir, pageFileName);
   const resourceDirName = generateResourceDirName(pageUrl);
-  const resourceDirPath = path.join(pathToDir, resourceDirName);
+  const resourceDirPath = path.join(fullPathToDir, resourceDirName);
 
   logMain(`Base url: ${baseUrl}`);
   logMain(`Generated path to saved page file: ${pageFilePath}`);
