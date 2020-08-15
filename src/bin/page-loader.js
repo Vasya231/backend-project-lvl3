@@ -16,7 +16,7 @@ program.version('0.0.1')
       console.error('Invalid page url.');
       process.exit(1);
     }
-    loadAndSavePage(url, cmdObj.output).catch((e) => {
+    loadAndSavePage(url, cmdObj.output, { promiseRunner: 'listr' }).catch((e) => {
       console.error(e.message);
       process.exit(1);
     });
