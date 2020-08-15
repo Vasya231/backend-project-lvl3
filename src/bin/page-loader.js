@@ -5,7 +5,7 @@ import program from 'commander';
 import loadAndSavePage from '../index';
 
 program.version('0.0.1')
-  .description('Loads and save web page from internet')
+  .description('Loads and saves web page from internet')
   .option('--output [path]', 'set output directory', process.cwd())
   .arguments('<url>')
   .action((url, cmdObj) => {
@@ -21,4 +21,5 @@ program.version('0.0.1')
       process.exit(1);
     });
   });
+
 program.parse(process.argv);

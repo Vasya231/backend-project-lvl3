@@ -11,6 +11,7 @@ import 'axios-debug-log';
 
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
 import friendifyError from './friendifyError';
+import execute from './execute';
 
 const tagProps = {
   img: {
@@ -168,9 +169,66 @@ export default (pageAddress, pathToDir, testMode = false) => {
 
   let localResourceMap;
   let $;
+  let renderedHtml;
 
   logNetwork('Start loading the page.');
-  return axiosGet(pageUrl.href)
+  const allPromises = {};
+
+  allPromises.loadPage = () => axiosGet(pageUrl.href)
+    .then((response) => {
+      logNetwork('Page loaded.');
+      $ = cheerio.load(response.data);
+      logMain('Html parsed.');
+
+      const uniqueLocalResourcePaths = getLocalResourcesPaths($, pageUrl);
+      logMain(`Extracted paths to local resources: ${uniqueLocalResourcePaths}`);
+
+      localResourceMap = generateResourceMap(uniqueLocalResourcePaths, resourceDirName, pageUrl);
+      const renderedLocalResourceMap = JSON.stringify(localResourceMap, null, 2);
+      logMain(`Generated local resources props: ${renderedLocalResourceMap}`);
+
+      transformLinks($, localResourceMap);
+
+      renderedHtml = beautify.html(
+        $.root().html(),
+        { indent_size: 2 },
+      );
+    });
+
+  allPromises.getLoadResourcesPromisesWithURLs = () => Object.values(localResourceMap)
+    .map((resourceProps) => ({
+      dlLink: resourceProps.dlLink,
+      loadPromise: generateLoadResourcePromise(resourceProps),
+    }));
+
+  allPromises.createResourceDir = () => fs.mkdir(resourceDirPath).then(() => {
+    logFs(`Created directory ${resourceDirPath}`);
+  });
+
+  allPromises.savePage = () => fs.writeFile(pageFilePath, renderedHtml, 'utf-8')
+    .then(() => logFs(`Main page file saved, path: ${pageFilePath}`));
+
+  allPromises.getSaveResourcesPromisesWithPaths = () => Object.values(localResourceMap).map(
+    ({ resourceFileName, data }) => {
+      const resourceFilePath = path.join(resourceDirPath, resourceFileName);
+      return {
+        savePromise: fs.writeFile(resourceFilePath, data)
+          .then(() => logFs(`Resource file saved, path: ${resourceFilePath}`)),
+        filePath: resourceFilePath,
+      };
+    },
+  );
+
+  allPromises.errorHandler = (e) => Promise.reject(friendifyError(e));
+
+  return execute(allPromises);
+  /* allPromises.loadPage()
+    .then(() => Promise.all(loadPromises()))
+    .then(() => allPromises.createResourceDir())
+    .then(() => allPromises.savePage())
+    .then(() => Promise.all(savePromises()))
+    .catch(allPromises.errorHandler); */
+  /* axiosGet(pageUrl.href)
     .then((response) => {
       logNetwork('Page loaded.');
       $ = cheerio.load(response.data);
@@ -193,7 +251,7 @@ export default (pageAddress, pathToDir, testMode = false) => {
       return fs.mkdir(resourceDirPath);
     })
     .then(() => {
-      const renderedHtml = beautify.html(
+      renderedHtml = beautify.html(
         $.root().html(),
         { indent_size: 2 },
       );
@@ -209,5 +267,5 @@ export default (pageAddress, pathToDir, testMode = false) => {
       );
       return Promise.all([savePagePromise, ...saveResourcePromises]);
     })
-    .catch((e) => Promise.reject(friendifyError(e)));
+    .catch((e) => Promise.reject(friendifyError(e))); */
 };

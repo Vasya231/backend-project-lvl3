@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx jest",
+    "testPos": "npx jest -t Positive",
     "build": "rm -rf dist && npx babel src --out-dir dist --source-maps inline",
     "prepublishOnly": "npm run build"
   },

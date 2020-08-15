@@ -26,3 +26,6 @@ coverage:
 
 watch:
 	npx jest --watch
+
+testPos:
+	DEBUG=page-loader* npm run testPos
