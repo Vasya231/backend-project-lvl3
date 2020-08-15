@@ -15,3 +15,7 @@
 Обработка ошибок:
 
 [![asciicast](https://asciinema.org/a/jBXEoGLX1rq69836wyXACcNqR.svg)](https://asciinema.org/a/jBXEoGLX1rq69836wyXACcNqR)
+
+Работа версии с listr:
+
+[![asciicast](https://asciinema.org/a/aF3s53e9XvSz1ti5z92SmQq5C.svg)](https://asciinema.org/a/aF3s53e9XvSz1ti5z92SmQq5C)
