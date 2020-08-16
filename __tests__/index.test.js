@@ -11,8 +11,8 @@ const downloadPageTest = (pageUrl, outputDir) => downloadPage(
   { testMode: true },
 );
 
-const pathToInputData = (filename) => `${__dirname}/__fixtures__/inputData/${filename}`;
-const pathToExpectedData = (filename) => `${__dirname}/__fixtures__/expected/${filename}`;
+const pathToInputData = (filename) => path.join(__dirname, '__fixtures__', 'inputData', filename);
+const pathToExpectedData = (filename) => path.join(__dirname, '__fixtures__', 'expected', filename);
 
 let tmpDir;
 const expectedData = {};
