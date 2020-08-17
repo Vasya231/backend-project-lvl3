@@ -55,14 +55,22 @@ beforeEach(async () => {
 });
 
 describe('Positive testing', () => {
-  test('Should download page with local resources and save them under generated names in output folder', async () => {
-    await downloadPageTest('https://testhost.ru/page1', tmpDir);
-    const actualData = {};
-    actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
-    actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-img1.jpg'));
-    actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-script1.js'));
-    actualData.css1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-styles.css'));
+  const actualData = {};
+
+  beforeAll(async () => {
+    const tmpDirPositive = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
+    await downloadPageTest('https://testhost.ru/page1', tmpDirPositive);
+    actualData.page1 = await fs.readFile(path.join(tmpDirPositive, 'testhost-ru-page1.html'), 'utf-8');
+    actualData.img1 = await fs.readFile(path.join(tmpDirPositive, 'testhost-ru-page1_files', 'assets-img1.jpg'));
+    actualData.script1 = await fs.readFile(path.join(tmpDirPositive, 'testhost-ru-page1_files', 'assets-script1.js'));
+    actualData.css1 = await fs.readFile(path.join(tmpDirPositive, 'testhost-ru-page1_files', 'assets-styles.css'));
+  });
+
+  test('Download, transform and save the page', () => {
     expect(actualData.page1).toMatchSnapshot();
+  });
+
+  test('Download and save local resources', () => {
     expect(actualData.img1).toEqual(expectedData.img1);
     expect(actualData.script1).toEqual(expectedData.script1);
     expect(actualData.css1).toEqual(expectedData.css1);

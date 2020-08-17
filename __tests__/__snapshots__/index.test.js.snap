@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Positive testing Should download page with local resources and save them under generated names in output folder 1`] = `
+exports[`Positive testing Download, transform and save the page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">
 
