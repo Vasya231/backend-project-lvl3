@@ -58,7 +58,7 @@ describe('Negative testing: invalid arguments', () => {
 describe('Negative testing: file system errors', () => {
   test('Output directory doesn\'t exist', async () => {
     mockWorkingPage('https://testhostbaddir');
-    const pathToResources = path.join(tmpDir, '/whatever/testhostbaddir_files');
+    const pathToResources = path.join(tmpDir, 'whatever', 'testhostbaddir_files');
     const expectedErrorMessage = `Cannot create directory '${pathToResources}'. Reason: no such file or directory`;
     const nonexistantDirPath = path.join(tmpDir, '/whatever');
     await expect(downloadPageTest('https://testhostbaddir', nonexistantDirPath)).rejects.toThrow(expectedErrorMessage);
