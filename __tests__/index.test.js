@@ -40,8 +40,8 @@ test('Should download page with local resources and save them under generated na
   await downloadPageTest('https://testhost.ru/page1', tmpDir);
   const actualData = {};
   actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
-  actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files/assets-img1.jpg'));
-  actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files/assets-script1.js'));
+  actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-img1.jpg'));
+  actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-script1.js'));
   expect(actualData).toMatchSnapshot();
 });
 
