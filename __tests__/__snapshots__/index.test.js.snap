@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Positive 1`] = `
+exports[`Should download page with local resources and save them under generated names in output folder 1`] = `
 Object {
   "img1": Object {
     "data": Array [
