@@ -11,7 +11,7 @@ const downloadPageTest = (pageUrl, outputDir) => downloadPage(
   { testMode: true },
 );
 
-const pathToInputData = (filename) => path.join(__dirname, '__fixtures__', 'inputData', filename);
+const pathToInputData = (...pathParts) => path.join(__dirname, '__fixtures__', 'inputData', ...pathParts);
 
 let tmpDir;
 
@@ -22,13 +22,13 @@ const mockWorkingPage = (hostname, pageName = '') => {
     .replyWithFile(200, pathToInputData('page1.html'));
   nock(hostname)
     .get('/assets/img1.jpg')
-    .replyWithFile(200, pathToInputData('page1_files/img1.jpg'));
+    .replyWithFile(200, pathToInputData('page1_files', 'img1.jpg'));
   nock(hostname)
     .get('/assets/script1.js')
-    .replyWithFile(200, pathToInputData('page1_files/script1.js'));
+    .replyWithFile(200, pathToInputData('page1_files', 'script1.js'));
   nock(hostname)
     .get('/assets/styles.css')
-    .replyWithFile(200, pathToInputData('page1_files/styles.css'));
+    .replyWithFile(200, pathToInputData('page1_files', 'styles.css'));
 };
 
 beforeEach(async () => {
