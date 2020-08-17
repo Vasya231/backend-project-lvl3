@@ -12,8 +12,10 @@ const downloadPageTest = (pageUrl, outputDir) => downloadPage(
 );
 
 const pathToInputData = (...pathParts) => path.join(__dirname, '__fixtures__', 'inputData', ...pathParts);
+const pathToExpectedData = (...pathParts) => path.join(__dirname, '__fixtures__', 'expected', ...pathParts);
 
 let tmpDir;
+const expectedData = {};
 
 const mockWorkingPage = (hostname, pageName = '') => {
   const pagePath = `/${pageName}`;
@@ -31,18 +33,40 @@ const mockWorkingPage = (hostname, pageName = '') => {
     .replyWithFile(200, pathToInputData('page1_files', 'styles.css'));
 };
 
+beforeAll(async () => {
+  mockWorkingPage('https://testhost.ru', 'page1');
+  mockWorkingPage('https://testhostbaddir');
+  mockWorkingPage('https://testhostnorights');
+  mockWorkingPage('https://testhostfileexists');
+  mockWorkingPage('https://testhostnorewrite');
+  nock('https://testhost404')
+    .get('/')
+    .reply(404);
+  nock('https://testhostnocode')
+    .get('/')
+    .replyWithError('!!!');
+  expectedData.img1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files', 'assets-img1.jpg'));
+  expectedData.script1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files', 'assets-script1.js'));
+  expectedData.css1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files', 'assets-styles.css'));
+});
+
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
-test('Should download page with local resources and save them under generated names in output folder', async () => {
-  mockWorkingPage('https://testhost.ru', 'page1');
-  await downloadPageTest('https://testhost.ru/page1', tmpDir);
-  const actualData = {};
-  actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
-  actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-img1.jpg'));
-  actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-script1.js'));
-  expect(actualData).toMatchSnapshot();
+describe('Positive testing', () => {
+  test('Should download page with local resources and save them under generated names in output folder', async () => {
+    await downloadPageTest('https://testhost.ru/page1', tmpDir);
+    const actualData = {};
+    actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
+    actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-img1.jpg'));
+    actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-script1.js'));
+    actualData.css1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files', 'assets-styles.css'));
+    expect(actualData.page1).toMatchSnapshot();
+    expect(actualData.img1).toEqual(expectedData.img1);
+    expect(actualData.script1).toEqual(expectedData.script1);
+    expect(actualData.css1).toEqual(expectedData.css1);
+  });
 });
 
 describe('Negative testing: invalid arguments', () => {
@@ -57,7 +81,6 @@ describe('Negative testing: invalid arguments', () => {
 
 describe('Negative testing: file system errors', () => {
   test('Output directory doesn\'t exist', async () => {
-    mockWorkingPage('https://testhostbaddir');
     const pathToResources = path.join(tmpDir, 'whatever', 'testhostbaddir_files');
     const expectedErrorMessage = `Cannot create directory '${pathToResources}'. Reason: no such file or directory`;
     const nonexistantDirPath = path.join(tmpDir, '/whatever');
@@ -65,7 +88,6 @@ describe('Negative testing: file system errors', () => {
   });
 
   test('No permissions', async () => {
-    mockWorkingPage('https://testhostnorights');
     const pathToResources = path.join(tmpDir, 'testhostnorights_files');
     const expectedErrorMessage = `Cannot create directory '${pathToResources}'. Reason: permission denied`;
     await fs.chmod(tmpDir, 0);
@@ -73,7 +95,6 @@ describe('Negative testing: file system errors', () => {
   });
 
   test('File already exists in place of directory', async () => {
-    mockWorkingPage('https://testhostfileexists');
     const existingFilePath = path.join(tmpDir, 'testhostfileexists_files');
     const expectedErrorMessage = `Cannot create directory '${existingFilePath}'. Reason: file already exists`;
     await fs.writeFile(existingFilePath, ' ');
@@ -81,7 +102,6 @@ describe('Negative testing: file system errors', () => {
   });
 
   test('File already exists and cant be rewritten', async () => {
-    mockWorkingPage('https://testhostnorewrite');
     const pathToPage = path.join(tmpDir, 'testhostnorewrite.html');
     const expectedErrorMessage = `Cannot open file '${pathToPage}'. Reason: permission denied`;
     await fs.writeFile(pathToPage, ' ');
@@ -92,9 +112,6 @@ describe('Negative testing: file system errors', () => {
 
 describe('Negative testing: network errors', () => {
   test('Page does not exist', async () => {
-    nock('https://testhost404')
-      .get('/')
-      .reply(404);
     const expectedErrorMessage = 'Cannot load \'https://testhost404/\'. Reason: Request failed with status code 404';
     await expect(downloadPageTest('https://testhost404', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
@@ -110,9 +127,6 @@ describe('Negative testing: network errors', () => {
   });
 
   test('Server replied with an error', async () => {
-    nock('https://testhostnocode')
-      .get('/')
-      .replyWithError('!!!');
     const expectedErrorMessage = 'Cannot load \'https://testhostnocode/\'. Reason: !!!';
     await expect(downloadPageTest('https://testhostnocode', tmpDir)).rejects.toThrow(expectedErrorMessage);
   });
