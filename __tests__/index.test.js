@@ -35,7 +35,7 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
 
-test('Positive', async () => {
+test('Should download page with local resources and save them under generated names in output folder', async () => {
   mockWorkingPage('https://testhost.ru', 'page1');
   await downloadPageTest('https://testhost.ru/page1', tmpDir);
   const actualData = {};
