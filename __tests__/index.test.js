@@ -12,10 +12,8 @@ const downloadPageTest = (pageUrl, outputDir) => downloadPage(
 );
 
 const pathToInputData = (filename) => path.join(__dirname, '__fixtures__', 'inputData', filename);
-const pathToExpectedData = (filename) => path.join(__dirname, '__fixtures__', 'expected', filename);
 
 let tmpDir;
-const expectedData = {};
 
 const mockWorkingPage = (hostname, pageName = '') => {
   const pagePath = `/${pageName}`;
@@ -33,12 +31,6 @@ const mockWorkingPage = (hostname, pageName = '') => {
     .replyWithFile(200, pathToInputData('page1_files/styles.css'));
 };
 
-beforeAll(async () => {
-  expectedData.page1 = await fs.readFile(pathToExpectedData('testhost-ru-page1.html'), 'utf-8');
-  expectedData.img1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files/assets-img1.jpg'));
-  expectedData.script1 = await fs.readFile(pathToExpectedData('testhost-ru-page1_files/assets-script1.js'));
-});
-
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'page-loader-'));
 });
@@ -50,7 +42,7 @@ test('Positive', async () => {
   actualData.page1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1.html'), 'utf-8');
   actualData.img1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files/assets-img1.jpg'));
   actualData.script1 = await fs.readFile(path.join(tmpDir, 'testhost-ru-page1_files/assets-script1.js'));
-  expect(actualData).toEqual(expectedData);
+  expect(actualData).toMatchSnapshot();
 });
 
 describe('Negative testing: invalid arguments', () => {
@@ -58,7 +50,7 @@ describe('Negative testing: invalid arguments', () => {
     expect(() => downloadPageTest('https://testhost1.ru', {})).toThrow('Path to directory must be a string.');
   });
 
-  test('Negative: Invalid page URL', () => {
+  test('Invalid page URL', () => {
     expect(() => downloadPageTest('xfdgrh', tmpDir)).toThrow('Invalid URL: xfdgrh');
   });
 });
