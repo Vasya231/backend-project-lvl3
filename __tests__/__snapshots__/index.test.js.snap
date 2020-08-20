@@ -1,5 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`Negative testing: invalid arguments Invalid directory name 1`] = `[ValidationError: pathToDir must be a \`string\` type, but the final value was: \`{}\`.]`;
+
 exports[`Positive testing Download, transform and save the page 1`] = `
 "<!DOCTYPE html>
 <html lang=\\"en\\">

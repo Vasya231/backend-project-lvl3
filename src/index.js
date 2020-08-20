@@ -1,7 +1,4 @@
-// import * as yup from 'yup';
-import { isString, isPlainObject } from 'lodash';
-
-import 'axios-debug-log';
+import * as yup from 'yup';
 
 import { listrExecute, noRenderExecute } from './promiseRunners';
 import generatePromises from './generatePromises';
@@ -12,25 +9,17 @@ const defaultConfig = {
   timeout: 3000,
 };
 
-/* const argumentsValidationSchema = yup.object().shape({
-  pageAddress: yup.string().required().url(),
+const argumentsValidationSchema = yup.object().shape({
+  pageAddress: yup.string().required().url((obj) => `Invalid URL: ${obj.value}`),
   pathToDir: yup.string(),
   userConfig: yup.object(),
-}); */
+});
 
 const validateArguments = (pageAddress, pathToDir, userConfig) => {
   logger.main('Validating arguments.');
-  /* argumentsValidationSchema.validateSync({
+  argumentsValidationSchema.validateSync({
     pageAddress, pathToDir, userConfig,
-  }); */
-  if (!isString(pathToDir)) {
-    throw new Error('Path to directory must be a string.');
-  }
-  if (!isPlainObject(userConfig)) {
-    throw new Error('Config must be an object.');
-  }
-  // eslint-disable-next-line no-new
-  new URL(pageAddress);
+  }, { strict: true });
 };
 
 const runDownloadPageWith = (pageAddress, pathToDir, promiseRunner, userConfig = defaultConfig) => {
