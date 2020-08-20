@@ -1,17 +1,10 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import cheerio from 'cheerio';
-import { uniq, keyBy } from 'lodash';
-import beautify from 'js-beautify';
-import debug from 'debug';
-import axios from 'axios';
-import nodeAdapter from 'axios/lib/adapters/http';
+import { isString } from 'lodash';
 
 import 'axios-debug-log';
 
-import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
-import friendifyError from './friendifyError';
-import getPromiseRunner from './promiseRunners';
+import { listrExecutor, noRenderExecutor } from './promiseRunners';
+import generatePromises from './generatePromises';
+import logger from './lib/logger';
 
 const defaultConfig = {
   testMode: false,
@@ -19,29 +12,9 @@ const defaultConfig = {
   promiseRunner: 'default',
 };
 
-const tagProps = {
-  img: {
-    tagName: 'img',
-    linkAttr: 'src',
-  },
-  script: {
-    tagName: 'script',
-    linkAttr: 'src',
-  },
-  link: {
-    tagName: 'link',
-    linkAttr: 'href',
-  },
-};
-
-const logMain = debug('page-loader');
-const logDom = debug('page-loader.dom');
-const logFs = debug('page-loader.file-system');
-const logNetwork = debug('page-loader.network');
-
 const validateArguments = (pageAddress, pathToDir, userConfig) => {
-  logMain('Validating arguments.');
-  if (typeof pathToDir !== 'string') {
+  logger.main('Validating arguments.');
+  if (!isString(pathToDir)) {
     throw new Error('Path to directory must be a string.');
   }
   if (typeof userConfig !== 'object') {
@@ -51,188 +24,24 @@ const validateArguments = (pageAddress, pathToDir, userConfig) => {
   new URL(pageAddress);
 };
 
-const getLocalResourcesPaths = ($, pageUrl) => {
-  const isLocal = (pathToResource) => {
-    const { origin, hostname } = pageUrl;
-    const resourceUrl = new URL(pathToResource, origin);
-    return (resourceUrl.hostname === hostname);
-  };
-
-  const getResourcesPathsFromTag = (tagName) => {
-    logDom(`Extracting resource path from ${tagName} elements.`);
-    const { linkAttr } = tagProps[tagName];
-    const links = $(tagName).map((i, element) => $(element).attr(linkAttr)).get();
-    return links.filter((resourcePath) => (resourcePath !== undefined));
-  };
-
-  const tags = Object.keys(tagProps);
-  logDom(`Extracting links to local resources from tags: ${tags}`);
-  const resourcePaths = tags.reduce(
-    (acc, tagName) => [...acc, ...getResourcesPathsFromTag(tagName)],
-    [],
-  );
-  const uniqueResourcePaths = uniq(resourcePaths);
-  return uniqueResourcePaths.filter(isLocal);
-};
-
-const transformLinks = ($, resourceMap) => {
-  const transformLinksInTag = (tagName) => {
-    logDom(`Transforming ${tagName} elements.`);
-    const { linkAttr } = tagProps[tagName];
-    $(tagName).each((i, element) => {
-      const resourcePath = $(element).attr(linkAttr);
-      if (!resourcePath) {
-        return;
-      }
-      const resourceProps = resourceMap[resourcePath];
-      if (!resourceProps) {
-        return;
-      }
-      const { newLink } = resourceProps;
-      logDom(`Transformed ${cheerio.html($(element))}`);
-      $(element).attr(linkAttr, newLink);
-    });
-  };
-
-  const tags = Object.keys(tagProps);
-  logDom(`Transforming links to resources in tags: ${tags}`);
-  tags.forEach(
-    (tagName) => transformLinksInTag(tagName),
-  );
-};
-
-const generateResourceMap = (resourcePaths, resourceDirName, pageUrl) => {
-  const { origin } = pageUrl;
-  const generateResourceFileName = getResourceFilenameGenerationFunction();
-  const resourceProps = resourcePaths.map((resourcePath) => {
-    const dlLink = new URL(resourcePath, origin);
-    const resourceFileName = generateResourceFileName(dlLink);
-    const newLink = `${resourceDirName}/${resourceFileName}`;
-    return {
-      resourcePath,
-      dlLink,
-      newLink,
-      resourceFileName,
-    };
-  });
-  return keyBy(resourceProps, ({ resourcePath }) => resourcePath);
-};
-
-export default (pageAddress, pathToDir, userConfig = defaultConfig) => {
+const downloadPage = (pageAddress, pathToDir, userConfig = defaultConfig) => {
   validateArguments(pageAddress, pathToDir, userConfig);
 
   const config = { ...defaultConfig, ...userConfig };
+  const allPromises = generatePromises(pageAddress, pathToDir, config, logger);
 
-  const axiosGet = (url, options = {}) => {
-    const abort = axios.CancelToken.source();
-    const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${config.timeout}ms exceeded.`;
-    const timeoutId = setTimeout(
-      () => {
-        abort.cancel(errorMessage);
-        logNetwork(`Request ${url} was cancelled due to timeout.`);
-      },
-      config.timeout,
-    );
-    return axios
-      .get(url, { cancelToken: abort.token, ...options })
-      .catch((e) => {
-        const { message } = e;
-        if (!axios.isCancel(e)) {
-          return Promise.reject(e);
-        }
-        const error = new Error(message);
-        return Promise.reject(error);
-      })
-      .finally(() => {
-        clearTimeout(timeoutId);
-      });
-  };
-
-  const generateLoadResourcePromise = (resourceProps) => {
-    const { dlLink } = resourceProps;
-    return axiosGet(dlLink.href, {
-      responseType: 'arraybuffer',
-    }).then(({ data }) => {
-      // eslint-disable-next-line no-param-reassign
-      resourceProps.data = data;
-      logNetwork(`${dlLink} successfully loaded.`);
-      return true;
-    });
-  };
-
-  const fullPathToDir = path.resolve(process.cwd(), pathToDir);
-
-  const execute = getPromiseRunner(config.promiseRunner);
-
-  if (config.testMode) {
-    axios.defaults.adapter = nodeAdapter;
-  }
-
-  logMain(`Parsing page address: ${pageAddress}`);
-  const pageUrl = new URL(pageAddress);
-  const baseUrl = pageUrl.origin;
-  const pageFileName = generateLocalFileName(pageUrl);
-  const pageFilePath = path.join(fullPathToDir, pageFileName);
-  const resourceDirName = generateResourceDirName(pageUrl);
-  const resourceDirPath = path.join(fullPathToDir, resourceDirName);
-
-  logMain(`Base url: ${baseUrl}`);
-  logMain(`Generated path to saved page file: ${pageFilePath}`);
-  logMain(`Generated path to saved resources dir: ${resourceDirPath}`);
-
-  let localResourceMap;
-  let $;
-  let renderedHtml;
-
-  logNetwork('Start loading the page.');
-  const allPromises = {};
-
-  allPromises.loadPage = () => axiosGet(pageUrl.href)
-    .then((response) => {
-      logNetwork('Page loaded.');
-      $ = cheerio.load(response.data);
-      logMain('Html parsed.');
-
-      const uniqueLocalResourcePaths = getLocalResourcesPaths($, pageUrl);
-      logMain(`Extracted paths to local resources: ${uniqueLocalResourcePaths}`);
-
-      localResourceMap = generateResourceMap(uniqueLocalResourcePaths, resourceDirName, pageUrl);
-      const renderedLocalResourceMap = JSON.stringify(localResourceMap, null, 2);
-      logMain(`Generated local resources props: ${renderedLocalResourceMap}`);
-
-      transformLinks($, localResourceMap);
-
-      renderedHtml = beautify.html(
-        $.root().html(),
-        { indent_size: 2 },
-      );
-    });
-
-  allPromises.getLoadResourcesPromisesWithURLs = () => Object.values(localResourceMap)
-    .map((resourceProps) => ({
-      dlLink: resourceProps.dlLink,
-      loadPromise: generateLoadResourcePromise(resourceProps),
-    }));
-
-  allPromises.createResourceDir = () => fs.mkdir(resourceDirPath).then(() => {
-    logFs(`Created directory ${resourceDirPath}`);
-  });
-
-  allPromises.savePage = () => fs.writeFile(pageFilePath, renderedHtml, 'utf-8')
-    .then(() => logFs(`Main page file saved, path: ${pageFilePath}`));
-
-  allPromises.getSaveResourcesPromisesWithPaths = () => Object.values(localResourceMap).map(
-    ({ resourceFileName, data }) => {
-      const resourceFilePath = path.join(resourceDirPath, resourceFileName);
-      return {
-        savePromise: fs.writeFile(resourceFilePath, data)
-          .then(() => logFs(`Resource file saved, path: ${resourceFilePath}`)),
-        filePath: resourceFilePath,
-      };
-    },
-  );
-
-  allPromises.errorHandler = (e) => Promise.reject(friendifyError(e));
-
-  return execute(allPromises);
+  return noRenderExecutor(allPromises);
 };
+
+const downloadPageCli = (pageAddress, pathToDir, userConfig = defaultConfig) => {
+  validateArguments(pageAddress, pathToDir, userConfig);
+
+  const config = { ...defaultConfig, ...userConfig };
+  const allPromises = generatePromises(pageAddress, pathToDir, config, logger);
+
+  return listrExecutor(allPromises);
+};
+
+export { downloadPage, downloadPageCli };
+
+export default downloadPageCli;

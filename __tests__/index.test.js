@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import nock from 'nock';
 
-import downloadPage from '../src/index';
+import { downloadPage } from '../src/index';
 
 const downloadPageTest = (pageUrl, outputDir) => downloadPage(
   pageUrl,
