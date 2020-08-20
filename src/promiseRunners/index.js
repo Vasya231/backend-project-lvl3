@@ -1,4 +1,4 @@
-import noRenderExecutor from './noRender';
-import listrExecutor from './listr';
+import noRenderExecute from './noRender';
+import listrExecute from './listr';
 
-export { noRenderExecutor, listrExecutor };
+export { noRenderExecute, listrExecute };

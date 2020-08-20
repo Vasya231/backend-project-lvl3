@@ -2,7 +2,7 @@ import { isString } from 'lodash';
 
 import 'axios-debug-log';
 
-import { listrExecutor, noRenderExecutor } from './promiseRunners';
+import { listrExecute, noRenderExecute } from './promiseRunners';
 import generatePromises from './generatePromises';
 import logger from './lib/logger';
 
@@ -30,7 +30,7 @@ const downloadPage = (pageAddress, pathToDir, userConfig = defaultConfig) => {
   const config = { ...defaultConfig, ...userConfig };
   const allPromises = generatePromises(pageAddress, pathToDir, config, logger);
 
-  return noRenderExecutor(allPromises);
+  return noRenderExecute(allPromises);
 };
 
 const downloadPageCli = (pageAddress, pathToDir, userConfig = defaultConfig) => {
@@ -39,9 +39,7 @@ const downloadPageCli = (pageAddress, pathToDir, userConfig = defaultConfig) => 
   const config = { ...defaultConfig, ...userConfig };
   const allPromises = generatePromises(pageAddress, pathToDir, config, logger);
 
-  return listrExecutor(allPromises);
+  return listrExecute(allPromises);
 };
 
 export { downloadPage, downloadPageCli };
-
-export default downloadPageCli;

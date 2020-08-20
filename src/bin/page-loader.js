@@ -2,7 +2,7 @@
 
 import program from 'commander';
 
-import loadAndSavePage from '../index';
+import { downloadPageCli } from '../index';
 
 program.version('0.0.1')
   .description('Loads and saves web page from internet')
@@ -16,7 +16,7 @@ program.version('0.0.1')
       console.error('Invalid page url.');
       process.exit(1);
     }
-    loadAndSavePage(url, cmdObj.output, { promiseRunner: 'listr' }).catch((e) => {
+    downloadPageCli(url, cmdObj.output).catch((e) => {
       console.error(e.message);
       process.exit(1);
     });

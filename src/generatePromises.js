@@ -12,19 +12,10 @@ import { generateLocalFileName, generateResourceDirName, getResourceFilenameGene
 import friendifyError from './friendifyError';
 import logger from './lib/logger';
 
-const tagProps = {
-  img: {
-    tagName: 'img',
-    linkAttr: 'src',
-  },
-  script: {
-    tagName: 'script',
-    linkAttr: 'src',
-  },
-  link: {
-    tagName: 'link',
-    linkAttr: 'href',
-  },
+const tagLinkMap = {
+  img: 'src',
+  script: 'src',
+  link: 'href',
 };
 
 const getWithManualTimeout = (url, instance, timeout, options = {}) => {
@@ -61,12 +52,12 @@ const getLocalResourcesPaths = ($, pageUrl) => {
 
   const getResourcesPathsFromTag = (tagName) => {
     logger.dom(`Extracting resource path from ${tagName} elements.`);
-    const { linkAttr } = tagProps[tagName];
+    const linkAttr = tagLinkMap[tagName];
     const links = $(tagName).map((i, element) => $(element).attr(linkAttr)).get();
     return links.filter((resourcePath) => (resourcePath !== undefined));
   };
 
-  const tags = Object.keys(tagProps);
+  const tags = Object.keys(tagLinkMap);
   logger.dom(`Extracting links to local resources from tags: ${tags}`);
   const resourcePaths = tags.reduce(
     (acc, tagName) => [...acc, ...getResourcesPathsFromTag(tagName)],
@@ -79,7 +70,7 @@ const getLocalResourcesPaths = ($, pageUrl) => {
 const transformLinks = ($, resourceMap) => {
   const transformLinksInTag = (tagName) => {
     logger.dom(`Transforming ${tagName} elements.`);
-    const { linkAttr } = tagProps[tagName];
+    const linkAttr = tagLinkMap[tagName];
     $(tagName).each((i, element) => {
       const resourcePath = $(element).attr(linkAttr);
       if (!resourcePath) {
@@ -95,7 +86,7 @@ const transformLinks = ($, resourceMap) => {
     });
   };
 
-  const tags = Object.keys(tagProps);
+  const tags = Object.keys(tagLinkMap);
   logger.dom(`Transforming links to resources in tags: ${tags}`);
   tags.forEach(
     (tagName) => transformLinksInTag(tagName),
