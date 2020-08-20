@@ -3,9 +3,8 @@ import Listr from 'listr';
 export default ({
   loadPage,
   createResourceDir,
-  getLoadResourcesPromisesWithURLs,
+  getDownloadResourcesPromisesWithURLs,
   savePage,
-  getSaveResourcesPromisesWithPaths,
   errorHandler,
 }) => {
   const tasks = new Listr([
@@ -18,32 +17,20 @@ export default ({
       task: createResourceDir,
     },
     {
-      title: 'Loading local resources',
+      title: 'Downloading local resources',
       task: () => {
-        const loadResourcesTasks = getLoadResourcesPromisesWithURLs().map(
-          ({ dlLink, loadPromise }) => ({
-            title: `Loading ${dlLink}`,
-            task: () => loadPromise,
+        const downloadResourcesTasks = getDownloadResourcesPromisesWithURLs().map(
+          ({ dlLink, resourceFilePath, downloadPromise }) => ({
+            title: `Downloading ${dlLink} to ${resourceFilePath}`,
+            task: () => downloadPromise,
           }),
         );
-        return new Listr(loadResourcesTasks, { concurrent: true });
+        return new Listr(downloadResourcesTasks, { concurrent: true });
       },
     },
     {
       title: 'Saving page',
       task: savePage,
-    },
-    {
-      title: 'Saving resource files',
-      task: () => {
-        const saveResourcesTasks = getSaveResourcesPromisesWithPaths().map(
-          ({ filePath, savePromise }) => ({
-            title: `Saving ${filePath}`,
-            task: () => savePromise,
-          }),
-        );
-        return new Listr(saveResourcesTasks, { concurrent: true });
-      },
     },
   ]);
   return tasks.run().catch(errorHandler);

@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import cheerio from 'cheerio';
-import { uniq, keyBy } from 'lodash';
+import { toPairs } from 'lodash';
 import beautify from 'js-beautify';
 import axios from 'axios';
 import nodeAdapter from 'axios/lib/adapters/http';
@@ -17,6 +17,8 @@ const tagLinkMap = {
   script: 'src',
   link: 'href',
 };
+
+const tags = Object.keys(tagLinkMap);
 
 const getWithManualTimeout = (url, instance, timeout, options = {}) => {
   const abort = axios.CancelToken.source();
@@ -43,71 +45,43 @@ const getWithManualTimeout = (url, instance, timeout, options = {}) => {
     });
 };
 
-const getLocalResourcesPaths = ($, pageUrl) => {
+const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
+  const { origin, hostname } = pageUrl;
+  const resourceFilenameMap = new Map();
+  const generateResourceFileName = getResourceFilenameGenerationFunction();
+
   const isLocal = (pathToResource) => {
-    const { origin, hostname } = pageUrl;
     const resourceUrl = new URL(pathToResource, origin);
     return (resourceUrl.hostname === hostname);
   };
 
-  const getResourcesPathsFromTag = (tagName) => {
-    logger.dom(`Extracting resource path from ${tagName} elements.`);
+  const processTag = (tagName) => {
+    logger.dom(`Processing tag: "${tagName}"`);
     const linkAttr = tagLinkMap[tagName];
-    const links = $(tagName).map((i, element) => $(element).attr(linkAttr)).get();
-    return links.filter((resourcePath) => (resourcePath !== undefined));
-  };
-
-  const tags = Object.keys(tagLinkMap);
-  logger.dom(`Extracting links to local resources from tags: ${tags}`);
-  const resourcePaths = tags.reduce(
-    (acc, tagName) => [...acc, ...getResourcesPathsFromTag(tagName)],
-    [],
-  );
-  const uniqueResourcePaths = uniq(resourcePaths);
-  return uniqueResourcePaths.filter(isLocal);
-};
-
-const transformLinks = ($, resourceMap) => {
-  const transformLinksInTag = (tagName) => {
-    logger.dom(`Transforming ${tagName} elements.`);
-    const linkAttr = tagLinkMap[tagName];
-    $(tagName).each((i, element) => {
-      const resourcePath = $(element).attr(linkAttr);
-      if (!resourcePath) {
-        return;
+    const elementsWithLocalLinks = $(tagName).get()
+      .filter((element) => {
+        logger.dom(`Checking ${$(element)}`);
+        const linkToResource = $(element).attr(linkAttr);
+        return (linkToResource && isLocal(linkToResource));
+      });
+    elementsWithLocalLinks.forEach((element) => {
+      logger.dom(`Transforming ${$(element)}`);
+      const linkToResource = $(element).attr(linkAttr);
+      const dlLink = new URL(linkToResource, origin);
+      logger.dom(`Full resource url: ${dlLink}`);
+      if (!resourceFilenameMap.get(dlLink)) {
+        const resourceFileName = generateResourceFileName(dlLink);
+        resourceFilenameMap.set(dlLink, resourceFileName);
+        logger.dom(`Generated new resource file name: ${resourceFileName}`);
       }
-      const resourceProps = resourceMap[resourcePath];
-      if (!resourceProps) {
-        return;
-      }
-      const { newLink } = resourceProps;
-      logger.dom(`Transformed ${cheerio.html($(element))}`);
+      const resourceFileName = resourceFilenameMap.get(dlLink);
+      const newLink = `${resourceDirName}/${resourceFileName}`;
       $(element).attr(linkAttr, newLink);
     });
   };
 
-  const tags = Object.keys(tagLinkMap);
-  logger.dom(`Transforming links to resources in tags: ${tags}`);
-  tags.forEach(
-    (tagName) => transformLinksInTag(tagName),
-  );
-};
-
-const generateResourceMap = (resourcePaths, resourceDirName, pageUrl) => {
-  const { origin } = pageUrl;
-  const generateResourceFileName = getResourceFilenameGenerationFunction();
-  const resourceProps = resourcePaths.map((resourcePath) => {
-    const dlLink = new URL(resourcePath, origin);
-    const resourceFileName = generateResourceFileName(dlLink);
-    const newLink = `${resourceDirName}/${resourceFileName}`;
-    return {
-      resourcePath,
-      dlLink,
-      newLink,
-      resourceFileName,
-    };
-  });
-  return keyBy(resourceProps, ({ resourcePath }) => resourcePath);
+  tags.forEach(processTag);
+  return resourceFilenameMap;
 };
 
 export default (pageAddress, pathToDir, config) => {
@@ -119,23 +93,15 @@ export default (pageAddress, pathToDir, config) => {
     url, axiosInstance, timeout, options,
   );
 
-  const generateLoadResourcePromise = (resourceProps) => {
-    const { dlLink } = resourceProps;
-    return axiosGet(dlLink.href, {
-      responseType: 'arraybuffer',
-    }).then(({ data }) => {
-      // eslint-disable-next-line no-param-reassign
-      resourceProps.data = data;
-      logger.network(`${dlLink} successfully loaded.`);
-      return true;
-    });
-  };
+  const generateDownloadResourcePromise = (dlLink, filePath) => axiosGet(dlLink, {
+    responseType: 'arraybuffer',
+  }).then(({ data }) => {
+    logger.network(`${dlLink} successfully loaded.`);
+    return fs.writeFile(filePath, data)
+      .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
+  });
 
   const fullPathToDir = path.resolve(process.cwd(), pathToDir);
-
-  if (config.testMode) {
-    axios.defaults.adapter = nodeAdapter;
-  }
 
   logger.main(`Parsing page address: ${pageAddress}`);
   const pageUrl = new URL(pageAddress);
@@ -149,7 +115,7 @@ export default (pageAddress, pathToDir, config) => {
   logger.main(`Generated path to saved page file: ${pageFilePath}`);
   logger.main(`Generated path to saved resources dir: ${resourceDirPath}`);
 
-  let localResourceMap;
+  let resourceFilenameMap;
   let $;
   let renderedHtml;
 
@@ -162,14 +128,11 @@ export default (pageAddress, pathToDir, config) => {
       $ = cheerio.load(response.data);
       logger.main('Html parsed.');
 
-      const uniqueLocalResourcePaths = getLocalResourcesPaths($, pageUrl);
-      logger.main(`Extracted paths to local resources: ${uniqueLocalResourcePaths}`);
-
-      localResourceMap = generateResourceMap(uniqueLocalResourcePaths, resourceDirName, pageUrl);
-      const renderedLocalResourceMap = JSON.stringify(localResourceMap, null, 2);
-      logger.main(`Generated local resources props: ${renderedLocalResourceMap}`);
-
-      transformLinks($, localResourceMap);
+      resourceFilenameMap = extractAndReplaceLinks($, pageUrl, resourceDirName);
+      logger.main('Local resources:');
+      toPairs(resourceFilenameMap).forEach(([dlLink, filename]) => {
+        logger.main(`${dlLink} : ${filename}`);
+      });
 
       renderedHtml = beautify.html(
         $.root().html(),
@@ -177,11 +140,15 @@ export default (pageAddress, pathToDir, config) => {
       );
     });
 
-  allPromises.getLoadResourcesPromisesWithURLs = () => Object.values(localResourceMap)
-    .map((resourceProps) => ({
-      dlLink: resourceProps.dlLink,
-      loadPromise: generateLoadResourcePromise(resourceProps),
-    }));
+  allPromises.getDownloadResourcesPromisesWithURLs = () => toPairs(resourceFilenameMap)
+    .map(([dlLink, filename]) => {
+      const resourceFilePath = path.join(resourceDirPath, filename);
+      return {
+        dlLink,
+        resourceFilePath,
+        downloadPromise: generateDownloadResourcePromise(dlLink.href, resourceFilePath),
+      };
+    });
 
   allPromises.createResourceDir = () => fs.mkdir(resourceDirPath).then(() => {
     logger.fs(`Created directory ${resourceDirPath}`);
@@ -189,17 +156,6 @@ export default (pageAddress, pathToDir, config) => {
 
   allPromises.savePage = () => fs.writeFile(pageFilePath, renderedHtml, 'utf-8')
     .then(() => logger.fs(`Main page file saved, path: ${pageFilePath}`));
-
-  allPromises.getSaveResourcesPromisesWithPaths = () => Object.values(localResourceMap).map(
-    ({ resourceFileName, data }) => {
-      const resourceFilePath = path.join(resourceDirPath, resourceFileName);
-      return {
-        savePromise: fs.writeFile(resourceFilePath, data)
-          .then(() => logger.fs(`Resource file saved, path: ${resourceFilePath}`)),
-        filePath: resourceFilePath,
-      };
-    },
-  );
 
   allPromises.errorHandler = (e) => Promise.reject(friendifyError(e));
 

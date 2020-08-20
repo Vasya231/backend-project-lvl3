@@ -1,4 +1,5 @@
-import { isString } from 'lodash';
+// import * as yup from 'yup';
+import { isString, isPlainObject } from 'lodash';
 
 import 'axios-debug-log';
 
@@ -9,15 +10,23 @@ import logger from './lib/logger';
 const defaultConfig = {
   testMode: false,
   timeout: 3000,
-  promiseRunner: 'default',
 };
+
+/* const argumentsValidationSchema = yup.object().shape({
+  pageAddress: yup.string().required().url(),
+  pathToDir: yup.string(),
+  userConfig: yup.object(),
+}); */
 
 const validateArguments = (pageAddress, pathToDir, userConfig) => {
   logger.main('Validating arguments.');
+  /* argumentsValidationSchema.validateSync({
+    pageAddress, pathToDir, userConfig,
+  }); */
   if (!isString(pathToDir)) {
     throw new Error('Path to directory must be a string.');
   }
-  if (typeof userConfig !== 'object') {
+  if (!isPlainObject(userConfig)) {
     throw new Error('Config must be an object.');
   }
   // eslint-disable-next-line no-new
