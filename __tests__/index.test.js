@@ -78,12 +78,12 @@ describe('Positive testing', () => {
 });
 
 describe('Negative testing: invalid arguments', () => {
-  test('Invalid directory name', () => {
-    expect(() => downloadPageTest('https://testhost1.ru', {})).toThrow('Path to directory must be a string.');
+  test('Invalid directory name', async () => {
+    await expect(downloadPageTest('https://testhost1.ru', {})).rejects.toThrow('Path to directory must be a string.');
   });
 
-  test('Invalid page URL', () => {
-    expect(() => downloadPageTest('xfdgrh', tmpDir)).toThrow('Invalid URL: xfdgrh');
+  test('Invalid page URL', async () => {
+    await expect(downloadPageTest('xfdgrh', tmpDir)).rejects.toThrow('Invalid URL: xfdgrh');
   });
 });
 

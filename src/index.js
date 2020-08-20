@@ -33,22 +33,23 @@ const validateArguments = (pageAddress, pathToDir, userConfig) => {
   new URL(pageAddress);
 };
 
-const downloadPage = (pageAddress, pathToDir, userConfig = defaultConfig) => {
-  validateArguments(pageAddress, pathToDir, userConfig);
+const runDownloadPageWith = (pageAddress, pathToDir, promiseRunner, userConfig = defaultConfig) => {
+  try {
+    validateArguments(pageAddress, pathToDir, userConfig);
+  } catch (e) {
+    return Promise.reject(e);
+  }
 
   const config = { ...defaultConfig, ...userConfig };
-  const allPromises = generatePromises(pageAddress, pathToDir, config, logger);
+  const allPromises = generatePromises(pageAddress, pathToDir, config);
 
-  return noRenderExecute(allPromises);
+  return promiseRunner(allPromises);
 };
 
-const downloadPageCli = (pageAddress, pathToDir, userConfig = defaultConfig) => {
-  validateArguments(pageAddress, pathToDir, userConfig);
+export const downloadPage = (pageAddress, pathToDir, userConfig) => runDownloadPageWith(
+  pageAddress, pathToDir, noRenderExecute, userConfig,
+);
 
-  const config = { ...defaultConfig, ...userConfig };
-  const allPromises = generatePromises(pageAddress, pathToDir, config, logger);
-
-  return listrExecute(allPromises);
-};
-
-export { downloadPage, downloadPageCli };
+export const downloadPageCli = (pageAddress, pathToDir, userConfig) => runDownloadPageWith(
+  pageAddress, pathToDir, listrExecute, userConfig,
+);
