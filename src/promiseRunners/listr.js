@@ -25,7 +25,7 @@ export default ({
             task: () => downloadPromise.catch(errorHandler),
           }),
         );
-        return new Listr(downloadResourcesTasks, { concurrent: true });
+        return new Listr(downloadResourcesTasks, { concurrent: true, exitOnError: false });
       },
     },
     {
