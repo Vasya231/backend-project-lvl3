@@ -10,11 +10,11 @@ export default ({
   const tasks = new Listr([
     {
       title: 'Loading page',
-      task: loadPage,
+      task: () => loadPage().catch(errorHandler),
     },
     {
       title: 'Creating resource directory',
-      task: createResourceDir,
+      task: () => createResourceDir().catch(errorHandler),
     },
     {
       title: 'Downloading local resources',
@@ -22,7 +22,7 @@ export default ({
         const downloadResourcesTasks = getDownloadResourcesPromisesWithURLs().map(
           ({ dlLink, resourceFilePath, downloadPromise }) => ({
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
-            task: () => downloadPromise,
+            task: () => downloadPromise.catch(errorHandler),
           }),
         );
         return new Listr(downloadResourcesTasks, { concurrent: true });
@@ -30,8 +30,8 @@ export default ({
     },
     {
       title: 'Saving page',
-      task: savePage,
+      task: () => savePage().catch(errorHandler),
     },
   ]);
-  return tasks.run().catch(errorHandler);
+  return tasks.run();
 };
