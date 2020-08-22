@@ -19,7 +19,7 @@ const tagLinkMap = {
 
 const tags = Object.keys(tagLinkMap);
 
-const getWithManualTimeout = (url, timeout, options = {}) => {
+const sendGetReqWithTimeout = (url, timeout, options = {}) => {
   const abort = axios.CancelToken.source();
   const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${timeout}ms exceeded.`;
   const timeoutId = setTimeout(
@@ -86,7 +86,7 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
 export default (pageAddress, pathToDir, config) => {
   const { timeout } = config;
 
-  const axiosGet = (url, options = {}) => getWithManualTimeout(
+  const axiosGet = (url, options = {}) => sendGetReqWithTimeout(
     url, timeout, options,
   );
 
