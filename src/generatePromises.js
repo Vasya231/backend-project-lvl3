@@ -4,7 +4,6 @@ import cheerio from 'cheerio';
 import { toPairs } from 'lodash';
 import beautify from 'js-beautify';
 import axios from 'axios';
-import nodeAdapter from 'axios/lib/adapters/http';
 
 import 'axios-debug-log';
 
@@ -20,7 +19,7 @@ const tagLinkMap = {
 
 const tags = Object.keys(tagLinkMap);
 
-const getWithManualTimeout = (url, instance, timeout, options = {}) => {
+const getWithManualTimeout = (url, timeout, options = {}) => {
   const abort = axios.CancelToken.source();
   const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${timeout}ms exceeded.`;
   const timeoutId = setTimeout(
@@ -30,7 +29,7 @@ const getWithManualTimeout = (url, instance, timeout, options = {}) => {
     },
     timeout,
   );
-  return instance
+  return axios
     .get(url, { cancelToken: abort.token, ...options })
     .catch((e) => {
       const { message } = e;
@@ -85,12 +84,10 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
 };
 
 export default (pageAddress, pathToDir, config) => {
-  const { timeout, testMode } = config;
-
-  const axiosInstance = testMode ? axios.create({ adapter: nodeAdapter }) : axios.create();
+  const { timeout } = config;
 
   const axiosGet = (url, options = {}) => getWithManualTimeout(
-    url, axiosInstance, timeout, options,
+    url, timeout, options,
   );
 
   const generateDownloadResourcePromise = (dlLink, filePath) => axiosGet(dlLink, {

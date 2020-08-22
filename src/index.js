@@ -5,7 +5,6 @@ import generatePromises from './generatePromises';
 import logger from './lib/logger';
 
 const defaultConfig = {
-  testMode: false,
   timeout: 3000,
 };
 

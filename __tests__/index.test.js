@@ -2,13 +2,14 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import nock from 'nock';
+import axios from 'axios';
+import nodeAdapter from 'axios/lib/adapters/http';
 
 import { downloadPage } from '../src/index';
 
 const downloadPageTest = (pageUrl, outputDir) => downloadPage(
   pageUrl,
   outputDir,
-  { testMode: true },
 );
 
 const pathToInputData = (...pathParts) => path.join(__dirname, '__fixtures__', 'inputData', ...pathParts);
@@ -34,6 +35,7 @@ const mockWorkingPage = (hostname, pageName = '') => {
 };
 
 beforeAll(async () => {
+  axios.defaults.adapter = nodeAdapter;
   mockWorkingPage('https://testhost.ru', 'page1');
   mockWorkingPage('https://testhostbaddir.com');
   mockWorkingPage('https://testhostnorights.com');
