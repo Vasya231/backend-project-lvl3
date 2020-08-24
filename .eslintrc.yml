@@ -10,5 +10,7 @@ extends:
   - 'airbnb-base'
   - 'plugin:jest/recommended'
 
+parser: babel-eslint
+
 rules:
   no-console: 0
