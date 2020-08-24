@@ -1,8 +1,9 @@
 import * as yup from 'yup';
 
 import { listrExecute, noRenderExecute } from './promiseRunners';
-import generatePromises from './generatePromises';
+// import generatePromises from './generatePromises';
 import logger from './lib/logger';
+import PromiseGenerator from './PromiseGenerator';
 
 const defaultConfig = {
   timeout: 3000,
@@ -29,9 +30,10 @@ const runDownloadPageWith = (pageAddress, pathToDir, promiseRunner, userConfig =
   }
 
   const config = { ...defaultConfig, ...userConfig };
-  const allPromises = generatePromises(pageAddress, pathToDir, config);
+  // const allPromises = generatePromises(pageAddress, pathToDir, config);
+  const promiseGenerator = new PromiseGenerator(pageAddress, pathToDir, config);
 
-  return promiseRunner(allPromises);
+  return promiseRunner(promiseGenerator);
 };
 
 export const downloadPage = (pageAddress, pathToDir, userConfig) => runDownloadPageWith(
