@@ -104,6 +104,10 @@ export default class PromiseGenerator {
     logger.network('Start loading the page.');
   }
 
+  renderedHtml = '';
+
+  resourceFilenameMap = new Map();
+
   axiosGet = (url, options = {}) => sendGetReqWithTimeout(url, this.timeout, options);
 
   generateDownloadResourcePromise = (dlLink, filePath) => this.axiosGet(
