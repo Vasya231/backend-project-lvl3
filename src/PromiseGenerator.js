@@ -8,7 +8,7 @@ import axios from 'axios';
 import 'axios-debug-log';
 
 import { generateLocalFileName, generateResourceDirName, getResourceFilenameGenerationFunction } from './nameGenerators';
-import friendifyError from './friendifyError';
+import friendifyError from './errorFriendifier';
 import logger from './lib/logger';
 
 const tagLinkMap = {
