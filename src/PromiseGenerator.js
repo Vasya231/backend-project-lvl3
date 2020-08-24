@@ -140,7 +140,7 @@ export default class PromiseGenerator {
     logger.fs(`Created directory ${this.resourceDirPath}`);
   });
 
-  getDownloadResourcesPromisesWithURLs = () => toPairs(this.resourceFilenameMap)
+  generateDownloadResourcesPromisesWithInfo = () => toPairs(this.resourceFilenameMap)
     .map(([dlLink, filename]) => {
       const resourceFilePath = path.join(this.resourceDirPath, filename);
       return {

@@ -1,11 +1,11 @@
 export default ({
   loadPage,
   createResourceDir,
-  getDownloadResourcesPromisesWithURLs,
+  generateDownloadResourcesPromisesWithInfo,
   savePage,
   errorHandler,
 }) => {
-  const getDownloadPromises = () => getDownloadResourcesPromisesWithURLs()
+  const getDownloadPromises = () => generateDownloadResourcesPromisesWithInfo()
     .map(({ downloadPromise }) => downloadPromise);
 
   return loadPage()

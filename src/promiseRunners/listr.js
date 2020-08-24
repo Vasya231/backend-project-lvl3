@@ -3,7 +3,7 @@ import Listr from 'listr';
 export default ({
   loadPage,
   createResourceDir,
-  getDownloadResourcesPromisesWithURLs,
+  generateDownloadResourcesPromisesWithInfo,
   savePage,
   errorHandler,
 }) => {
@@ -19,7 +19,7 @@ export default ({
     {
       title: 'Downloading local resources',
       task: () => {
-        const downloadResourcesTasks = getDownloadResourcesPromisesWithURLs().map(
+        const downloadResourcesTasks = generateDownloadResourcesPromisesWithInfo().map(
           ({ dlLink, resourceFilePath, downloadPromise }) => ({
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
             task: () => downloadPromise.catch(errorHandler),
