@@ -4,40 +4,34 @@ import { listrExecute, noRenderExecute } from './promiseRunners';
 import logger from './lib/logger';
 import PromiseGenerator from './PromiseGenerator';
 
-const defaultConfig = {
-  timeout: 3000,
-};
-
 const argumentsValidationSchema = yup.object().shape({
   pageAddress: yup.string().required().url((obj) => `Invalid URL: ${obj.value}`),
   pathToDir: yup.string(),
-  userConfig: yup.object(),
+  timeout: yup.number().integer('Timeout must be integer').min(0, 'Timeout must be positive'),
 });
 
-const validateArguments = (pageAddress, pathToDir, userConfig) => {
+const validateArguments = (pageAddress, pathToDir, timeout) => {
   logger.main('Validating arguments.');
   argumentsValidationSchema.validateSync({
-    pageAddress, pathToDir, userConfig,
+    pageAddress, pathToDir, timeout,
   }, { strict: true });
 };
 
-const runDownloadPageWith = (pageAddress, pathToDir, promiseRunner, userConfig = defaultConfig) => {
+const runDownloadPageWith = (pageAddress, pathToDir, promiseRunner, timeout) => {
   try {
-    validateArguments(pageAddress, pathToDir, userConfig);
+    validateArguments(pageAddress, pathToDir, Number(timeout));
   } catch (e) {
     return Promise.reject(e);
   }
-
-  const config = { ...defaultConfig, ...userConfig };
-  const promiseGenerator = new PromiseGenerator(pageAddress, pathToDir, config);
+  const promiseGenerator = new PromiseGenerator(pageAddress, pathToDir, timeout);
 
   return promiseRunner(promiseGenerator);
 };
 
-export const downloadPage = (pageAddress, pathToDir, userConfig) => runDownloadPageWith(
-  pageAddress, pathToDir, noRenderExecute, userConfig,
+export const downloadPage = (pageAddress, pathToDir, timeout = 3000) => runDownloadPageWith(
+  pageAddress, pathToDir, noRenderExecute, timeout,
 );
 
-export const downloadPageCli = (pageAddress, pathToDir, userConfig) => runDownloadPageWith(
-  pageAddress, pathToDir, listrExecute, userConfig,
+export const downloadPageCli = (pageAddress, pathToDir, timeout = 3000) => runDownloadPageWith(
+  pageAddress, pathToDir, listrExecute, timeout,
 );

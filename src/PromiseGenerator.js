@@ -83,8 +83,8 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
 };
 
 export default class PromiseGenerator {
-  constructor(pageAddress, pathToDir, config) {
-    this.timeout = config.timeout;
+  constructor(pageAddress, pathToDir, timeout) {
+    this.timeout = timeout;
 
     const fullPathToDir = path.resolve(process.cwd(), pathToDir);
 
