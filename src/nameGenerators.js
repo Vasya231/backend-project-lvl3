@@ -1,3 +1,5 @@
+import path from 'path';
+
 const transformString = (str) => str.replace(/\W/, '-');
 
 const parsePathname = (pathname) => {
@@ -10,22 +12,12 @@ const parsePathname = (pathname) => {
     };
   }
   const pathnamePartsCount = pathnameParts.length;
-  const possibleFilename = pathnameParts[pathnamePartsCount - 1];
-  const filenameParts = possibleFilename.split('.').filter((part) => part !== '');
-  const filenamePartsCount = filenameParts.length;
-  const filenameHasExtension = (filenameParts.length > 1) && (!possibleFilename.endsWith('.'));
-  if (!filenameHasExtension) {
-    return {
-      pathnameParts: pathnameParts.slice(0, pathnamePartsCount - 1),
-      filename: possibleFilename,
-      extension: null,
-    };
-  }
-  const extension = filenameParts[filenamePartsCount - 1];
-  const filenameWithoutExtension = filenameParts.slice(0, filenamePartsCount - 1).join('.');
+  const fullFilename = pathnameParts[pathnamePartsCount - 1];
+  const extension = path.extname(fullFilename);
+  const filename = fullFilename.slice(0, fullFilename.length - extension.length);
   return {
     pathnameParts: pathnameParts.slice(0, pathnamePartsCount - 1),
-    filename: filenameWithoutExtension,
+    filename,
     extension,
   };
 };
@@ -48,7 +40,7 @@ const generatePrefix = (url, isResource = false) => {
 export const generateLocalFileName = (url) => {
   const { pathname } = url;
   const { extension } = parsePathname(pathname);
-  const transformedSuffix = extension ? `.${transformString(extension)}` : '.html';
+  const transformedSuffix = extension ? `.${transformString(extension.slice(1))}` : '.html';
   const transformedPrefix = generatePrefix(url);
   return `${transformedPrefix}${transformedSuffix}`;
 };
@@ -61,7 +53,7 @@ export const getResourceFilenameGenerationFunction = () => {
     const { pathname } = url;
     const { extension } = parsePathname(pathname);
     const transformedPrefix = generatePrefix(url, true);
-    const transformedSuffix = extension ? `.${transformString(extension)}` : '';
+    const transformedSuffix = extension ? `.${transformString(extension.slice(1))}` : '';
     const baseFilename = `${transformedPrefix}${transformedSuffix}`;
     const timesUsed = usedNames.get(baseFilename);
     if (!timesUsed) {
