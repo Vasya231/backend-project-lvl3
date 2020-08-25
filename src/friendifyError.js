@@ -11,11 +11,11 @@ const otherCodeTranslations = {
 };
 
 const translateCode = (codeToTranslate) => {
-  const err = errorTables.code[codeToTranslate];
-  if (!err) {
+  const standartNodeError = errorTables.code[codeToTranslate];
+  if (!standartNodeError) {
     return otherCodeTranslations[codeToTranslate] || codeToTranslate;
   }
-  return err.description;
+  return standartNodeError.description;
 };
 
 const friendifyFSError = (error) => {

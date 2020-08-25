@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import cheerio from 'cheerio';
-import { toPairs } from 'lodash';
 import beautify from 'js-beautify';
 import axios from 'axios';
 
@@ -31,11 +30,11 @@ const sendGetReqWithTimeout = (url, timeout, options = {}) => {
   );
   return axios
     .get(url, { cancelToken: abort.token, ...options })
-    .catch((e) => {
-      const { message } = e;
-      if (!axios.isCancel(e)) {
-        return Promise.reject(e);
+    .catch((thrownObject) => {
+      if (!axios.isCancel(thrownObject)) {
+        return Promise.reject(thrownObject);
       }
+      const { message } = thrownObject;
       const error = new Error(message);
       return Promise.reject(error);
     })
@@ -56,16 +55,16 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
 
   const processTag = (tagName) => {
     logger.dom(`Processing tag: "${tagName}"`);
-    const linkAttr = tagLinkMap[tagName];
+    const attributeWithLink = tagLinkMap[tagName];
     const elementsWithLocalLinks = $(tagName).get()
       .filter((element) => {
         logger.dom(`Checking ${$(element)}`);
-        const linkToResource = $(element).attr(linkAttr);
+        const linkToResource = $(element).attr(attributeWithLink);
         return (linkToResource && isLocal(linkToResource));
       });
     elementsWithLocalLinks.forEach((element) => {
       logger.dom(`Transforming ${$(element)}`);
-      const linkToResource = $(element).attr(linkAttr);
+      const linkToResource = $(element).attr(attributeWithLink);
       const dlLink = new URL(linkToResource, origin);
       logger.dom(`Full resource url: ${dlLink}`);
       if (!resourceFilenameMap.get(dlLink)) {
@@ -74,8 +73,8 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
         logger.dom(`Generated new resource file name: ${resourceFileName}`);
       }
       const resourceFileName = resourceFilenameMap.get(dlLink);
-      const newLink = `${resourceDirName}/${resourceFileName}`;
-      $(element).attr(linkAttr, newLink);
+      const newLink = path.join(resourceDirName, resourceFileName);
+      $(element).attr(attributeWithLink, newLink);
     });
   };
 
@@ -100,13 +99,11 @@ export default class PromiseGenerator {
     logger.main(`Base url: ${baseUrl}`);
     logger.main(`Generated path to saved page file: ${this.pageFilePath}`);
     logger.main(`Generated path to saved resources dir: ${this.resourceDirPath}`);
-
-    logger.network('Start loading the page.');
   }
 
-  renderedHtml = '';
+  renderedHtml;
 
-  resourceFilenameMap = new Map();
+  resourceFilenameMap;
 
   axiosGet = (url, options = {}) => sendGetReqWithTimeout(url, this.timeout, options);
 
@@ -126,7 +123,7 @@ export default class PromiseGenerator {
 
       this.resourceFilenameMap = extractAndReplaceLinks($, this.pageUrl, this.resourceDirName);
       logger.main('Local resources:');
-      toPairs(this.resourceFilenameMap).forEach(([dlLink, filename]) => {
+      [...this.resourceFilenameMap.entries()].forEach(([dlLink, filename]) => {
         logger.main(`${dlLink} : ${filename}`);
       });
 
@@ -140,7 +137,7 @@ export default class PromiseGenerator {
     logger.fs(`Created directory ${this.resourceDirPath}`);
   });
 
-  generateDownloadResourcesPromisesWithInfo = () => toPairs(this.resourceFilenameMap)
+  generateDownloadResourcesPromisesWithInfo = () => [...this.resourceFilenameMap.entries()]
     .map(([dlLink, filename]) => {
       const resourceFilePath = path.join(this.resourceDirPath, filename);
       return {
@@ -153,5 +150,5 @@ export default class PromiseGenerator {
   savePage = () => fs.writeFile(this.pageFilePath, this.renderedHtml, 'utf-8')
     .then(() => logger.fs(`Main page file saved, path: ${this.pageFilePath}`));
 
-  errorHandler = (e) => Promise.reject(friendifyError(e));
+  errorHandler = (error) => Promise.reject(friendifyError(error));
 }
