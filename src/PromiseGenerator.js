@@ -123,7 +123,7 @@ export default class PromiseGenerator {
 
       this.resourceFilenameMap = extractAndReplaceLinks($, this.pageUrl, this.resourceDirName);
       logger.main('Local resources:');
-      [...this.resourceFilenameMap.entries()].forEach(([dlLink, filename]) => {
+      this.resourceFilenameMap.forEach(([dlLink, filename]) => {
         logger.main(`${dlLink} : ${filename}`);
       });
 
@@ -137,7 +137,7 @@ export default class PromiseGenerator {
     logger.fs(`Created directory ${this.resourceDirPath}`);
   });
 
-  generateDownloadResourcesPromisesWithInfo = () => [...this.resourceFilenameMap.entries()]
+  generateDownloadResourcesPromisesWithInfo = () => [...this.resourceFilenameMap]
     .map(([dlLink, filename]) => {
       const resourceFilePath = path.join(this.resourceDirPath, filename);
       return {
