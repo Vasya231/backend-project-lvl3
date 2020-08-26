@@ -14,7 +14,7 @@ const parsePathname = (pathname) => {
   const pathnamePartsCount = pathnameParts.length;
   const fullFilename = pathnameParts[pathnamePartsCount - 1];
   const extension = path.extname(fullFilename);
-  const filename = fullFilename.slice(0, fullFilename.length - extension.length);
+  const filename = path.basename(fullFilename, extension);
   return {
     pathnameParts: pathnameParts.slice(0, pathnamePartsCount - 1),
     filename,
