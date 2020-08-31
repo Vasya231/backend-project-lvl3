@@ -64,3 +64,16 @@ export const getResourceFilenameGenerationFunction = () => {
     return `${transformedPrefix}(${timesUsed})${transformedSuffix}`;
   };
 };
+
+export const generateLocalPaths = (pageUrl, pathToDir) => {
+  const fullPathToDir = path.resolve(process.cwd(), pathToDir);
+  const pageFileName = generateLocalFileName(pageUrl);
+  const pageFilePath = path.join(fullPathToDir, pageFileName);
+  const resourceDirName = generateResourceDirName(pageUrl);
+  const resourceDirPath = path.join(fullPathToDir, resourceDirName);
+  return {
+    pageFilePath,
+    resourceDirName,
+    resourceDirPath,
+  };
+};

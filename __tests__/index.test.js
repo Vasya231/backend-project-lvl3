@@ -5,7 +5,7 @@ import nock from 'nock';
 import axios from 'axios';
 import nodeAdapter from 'axios/lib/adapters/http';
 
-import { downloadPage } from '../src/index';
+import downloadPage from '../src/index';
 
 const downloadPageTest = (pageUrl, outputDir) => downloadPage(
   pageUrl,

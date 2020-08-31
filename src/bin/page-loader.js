@@ -2,14 +2,14 @@
 
 import program from 'commander';
 
-import { downloadPageCli } from '../index';
+import downloadPage from '../index';
 
 program.version('0.0.1')
   .description('Loads and saves web page from internet')
   .option('--output [path]', 'set output directory', process.cwd())
   .option('--timeout [timeout]', 'set request timeout', 3000)
   .arguments('<url>')
-  .action((url, cmdObj) => downloadPageCli(url, cmdObj.output, cmdObj.timeout).catch((e) => {
+  .action((url, cmdObj) => downloadPage(url, cmdObj.output, cmdObj.timeout).catch((e) => {
     console.error(e.message);
     process.exit(1);
   }));
