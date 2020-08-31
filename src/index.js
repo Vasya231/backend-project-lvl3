@@ -133,7 +133,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
 
       resourceFilenameMap = extractAndReplaceLinks($, pageUrl, resourceDirName);
       logger.main('Local resources:');
-      resourceFilenameMap.forEach(([dlLink, filename]) => {
+      resourceFilenameMap.forEach((dlLink, filename) => {
         logger.main(`${dlLink} : ${filename}`);
       });
 
