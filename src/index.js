@@ -81,13 +81,14 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
       logger.dom(`Transforming ${$(element)}`);
       const linkToResource = $(element).attr(attributeWithLink);
       const dlLink = new URL(linkToResource, origin);
+      const dlLinkString = dlLink.href;
       logger.dom(`Full resource url: ${dlLink}`);
-      if (!resourceFilenameMap.get(dlLink)) {
+      if (!resourceFilenameMap.get(dlLinkString)) {
         const resourceFileName = generateResourceFileName(dlLink);
-        resourceFilenameMap.set(dlLink, resourceFileName);
+        resourceFilenameMap.set(dlLinkString, resourceFileName);
         logger.dom(`Generated new resource file name: ${resourceFileName}`);
       }
-      const resourceFileName = resourceFilenameMap.get(dlLink);
+      const resourceFileName = resourceFilenameMap.get(dlLinkString);
       const newLink = path.join(resourceDirName, resourceFileName);
       $(element).attr(attributeWithLink, newLink);
     });
@@ -154,7 +155,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
           const resourceFilePath = path.join(resourceDirPath, filename);
           return {
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
-            task: () => generateDownloadResourcePromise(dlLink.href, resourceFilePath)
+            task: () => generateDownloadResourcePromise(dlLink, resourceFilePath)
               .catch(transformError),
           };
         });
