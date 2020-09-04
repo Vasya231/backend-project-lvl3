@@ -58,15 +58,16 @@ const validateArguments = (pageAddress, pathToDir, timeout) => {
   }, { strict: true });
 };
 
-const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
+const isLocal = (pathToResource, pageUrl) => {
   const { origin, hostname } = pageUrl;
+  const resourceUrl = new URL(pathToResource, origin);
+  return (resourceUrl.hostname === hostname);
+};
+
+const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
+  const { origin } = pageUrl;
   const resourceFilenameMap = new Map();
   const generateResourceFileName = getResourceFilenameGenerationFunction();
-
-  const isLocal = (pathToResource) => {
-    const resourceUrl = new URL(pathToResource, origin);
-    return (resourceUrl.hostname === hostname);
-  };
 
   const processTag = (tagName) => {
     logger.dom(`Processing tag: "${tagName}"`);
@@ -75,7 +76,7 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
       .filter((element) => {
         logger.dom(`Checking ${$(element)}`);
         const linkToResource = $(element).attr(attributeWithLink);
-        return (linkToResource && isLocal(linkToResource));
+        return (linkToResource && isLocal(linkToResource, pageUrl));
       });
     elementsWithLocalLinks.forEach((element) => {
       logger.dom(`Transforming ${$(element)}`);
