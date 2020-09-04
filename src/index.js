@@ -5,6 +5,7 @@ import cheerio from 'cheerio';
 import beautify from 'js-beautify';
 import { promises as fs } from 'fs';
 import Listr from 'listr';
+import { uniq } from 'lodash';
 
 import logger from './lib/logger';
 import { generateLocalPaths, getResourceFilenameGenerationFunction } from './nameGenerators';
@@ -36,42 +37,47 @@ const extractAndReplaceLinks = (html, pageUrl, resourceDirName) => {
   const $ = cheerio.load(html);
   logger.dom('Html parsed.');
   const { origin } = pageUrl;
-  const resourceFilenameMap = new Map();
   const generateResourceFileName = getResourceFilenameGenerationFunction();
 
-  const processTag = (tagName) => {
+  const extractLocalLinks = (tagName) => {
     logger.dom(`Processing tag: "${tagName}"`);
     const attributeWithLink = tagLinkMap[tagName];
-    const elementsWithLocalLinks = $(tagName).get()
-      .filter((element) => {
-        logger.dom(`Checking ${$(element)}`);
-        const linkToResource = $(element).attr(attributeWithLink);
-        return (linkToResource && isLocal(linkToResource, pageUrl));
-      });
-    elementsWithLocalLinks.forEach((element) => {
-      logger.dom(`Transforming ${$(element)}`);
-      const linkToResource = $(element).attr(attributeWithLink);
-      const dlLink = new URL(linkToResource, origin);
-      const dlLinkString = dlLink.href;
-      logger.dom(`Full resource url: ${dlLink}`);
-      if (!resourceFilenameMap.get(dlLinkString)) {
-        const resourceFileName = generateResourceFileName(dlLink);
-        resourceFilenameMap.set(dlLinkString, resourceFileName);
-        logger.dom(`Generated new resource file name: ${resourceFileName}`);
-      }
-      const resourceFileName = resourceFilenameMap.get(dlLinkString);
-      const newLink = path.join(resourceDirName, resourceFileName);
-      $(element).attr(attributeWithLink, newLink);
-    });
+    const links = $(tagName).map((index, element) => $(element).attr(attributeWithLink)).get();
+    return links.filter((link) => (link && isLocal(link, pageUrl)));
   };
 
-  tags.forEach(processTag);
+  const localLinks = tags.reduce(
+    (acc, tag) => [...acc, ...extractLocalLinks(tag)],
+    [],
+  );
+  logger.dom(`Local links: ${localLinks}`);
+  const uniqueLocalLinks = uniq(localLinks);
+  logger.dom(`Unique local links: ${uniqueLocalLinks}`);
+  const resourcesWithLinks = uniqueLocalLinks.map((link) => {
+    const dlLinkURL = new URL(link, origin);
+    return {
+      localLink: link,
+      dlLink: dlLinkURL.href,
+      filename: generateResourceFileName(dlLinkURL),
+    };
+  });
+  logger.dom('%o', resourcesWithLinks);
+
+  resourcesWithLinks.forEach(({ localLink, filename }) => {
+    const newLink = path.join(resourceDirName, filename);
+    tags.forEach((tagName) => {
+      const attributeWithLink = tagLinkMap[tagName];
+      $(`${tagName}[${attributeWithLink}='${localLink}']`)
+        .each((index, element) => $(element).attr(attributeWithLink, newLink));
+    });
+  });
+
   const renderedHtml = beautify.html(
     $.root().html(),
     { indent_size: 2 },
   );
 
-  return { resourceFilenameMap, renderedHtml };
+  return { resourcesWithLinks, renderedHtml };
 };
 
 const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
@@ -97,7 +103,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
   logger.main(`Generated path to saved page file: ${pageFilePath}`);
   logger.main(`Generated path to saved resources dir: ${resourceDirPath}`);
 
-  let resourceFilenameMap;
+  let resourcesWithLinks;
   let renderedHtml;
 
   return sendGetReqWithTimeout(pageUrl.href, timeout)
@@ -105,10 +111,10 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
       logger.network('Page loaded.');
 
       ({
-        resourceFilenameMap, renderedHtml,
+        resourcesWithLinks, renderedHtml,
       } = extractAndReplaceLinks(response.data, pageUrl, resourceDirName));
       logger.main('Local resources:');
-      resourceFilenameMap.forEach((dlLink, filename) => {
+      resourcesWithLinks.forEach(({ dlLink, filename }) => {
         logger.main(`${dlLink} : ${filename}`);
       });
     })
@@ -119,8 +125,8 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
     })
     .then(() => {
       logger.fs(`Saved page ${pageFilePath}`);
-      const tasks = [...resourceFilenameMap]
-        .map(([dlLink, filename]) => {
+      const tasks = resourcesWithLinks
+        .map(({ dlLink, filename }) => {
           const resourceFilePath = path.join(resourceDirPath, filename);
           return {
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
