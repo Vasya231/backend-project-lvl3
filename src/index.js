@@ -1,16 +1,15 @@
 import * as yup from 'yup';
-import axios from 'axios';
+
 import path from 'path';
 import cheerio from 'cheerio';
 import beautify from 'js-beautify';
 import { promises as fs } from 'fs';
 import Listr from 'listr';
 
-import 'axios-debug-log';
-
 import logger from './lib/logger';
 import { generateLocalPaths, getResourceFilenameGenerationFunction } from './nameGenerators';
 import friendifyError from './friendifyError';
+import { sendGetReqWithTimeout, isLocal } from './utils';
 
 const tagLinkMap = {
   img: 'src',
@@ -19,31 +18,6 @@ const tagLinkMap = {
 };
 
 const tags = Object.keys(tagLinkMap);
-
-const sendGetReqWithTimeout = (url, timeout, options = {}) => {
-  const abort = axios.CancelToken.source();
-  const errorMessage = `Cannot load '${url}'. Reason: Timeout of ${timeout}ms exceeded.`;
-  const timeoutId = setTimeout(
-    () => {
-      abort.cancel(errorMessage);
-      logger.network(`Request ${url} was cancelled due to timeout.`);
-    },
-    timeout,
-  );
-  return axios
-    .get(url, { cancelToken: abort.token, ...options })
-    .catch((thrownObject) => {
-      if (!axios.isCancel(thrownObject)) {
-        return Promise.reject(thrownObject);
-      }
-      const { message } = thrownObject;
-      const error = new Error(message);
-      return Promise.reject(error);
-    })
-    .finally(() => {
-      clearTimeout(timeoutId);
-    });
-};
 
 const argumentsValidationSchema = yup.object().shape({
   pageAddress: yup.string().required().url((obj) => `Invalid URL: ${obj.value}`),
@@ -56,12 +30,6 @@ const validateArguments = (pageAddress, pathToDir, timeout) => {
   argumentsValidationSchema.validateSync({
     pageAddress, pathToDir, timeout,
   }, { strict: true });
-};
-
-const isLocal = (pathToResource, pageUrl) => {
-  const { origin, hostname } = pageUrl;
-  const resourceUrl = new URL(pathToResource, origin);
-  return (resourceUrl.hostname === hostname);
 };
 
 const extractAndReplaceLinks = (html, pageUrl, resourceDirName) => {
