@@ -33,7 +33,7 @@ const validateArguments = (pageAddress, pathToDir, timeout) => {
   }, { strict: true });
 };
 
-const extractAndReplaceLinks = (html, pageUrl, resourceDirName) => {
+const extractAndReplaceLinksAndAlsoRenderHtml = (html, pageUrl, resourceDirName) => {
   const $ = cheerio.load(html);
   logger.dom('Html parsed.');
   const { origin } = pageUrl;
@@ -110,7 +110,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
 
       ({
         resourcesWithLinks, renderedHtml,
-      } = extractAndReplaceLinks(response.data, pageUrl, resourceDirName));
+      } = extractAndReplaceLinksAndAlsoRenderHtml(response.data, pageUrl, resourceDirName));
       logger.main('Local resources:');
       resourcesWithLinks.forEach(({ dlLink, filename }) => {
         logger.main(`${dlLink} : ${filename}`);
