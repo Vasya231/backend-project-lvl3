@@ -48,19 +48,19 @@ export const generateLocalFileName = (url) => {
 export const generateResourceDirName = (url) => `${generatePrefix(url)}_files`;
 
 export const getResourceFilenameGenerationFunction = () => {
-  const usedNames = new Map();
+  const usedNamesWithUseCount = new Map();
   return (url) => {
     const { pathname } = url;
     const { extension } = parsePathname(pathname);
     const transformedPrefix = generatePrefix(url, 'resource');
     const transformedSuffix = extension ? `.${transformString(extension.slice(1))}` : '';
     const baseFilename = `${transformedPrefix}${transformedSuffix}`;
-    const timesUsed = usedNames.get(baseFilename);
+    const timesUsed = usedNamesWithUseCount.get(baseFilename);
     if (!timesUsed) {
-      usedNames.set(baseFilename, 1);
+      usedNamesWithUseCount.set(baseFilename, 1);
       return baseFilename;
     }
-    usedNames.set(baseFilename, timesUsed + 1);
+    usedNamesWithUseCount.set(baseFilename, timesUsed + 1);
     return `${transformedPrefix}(${timesUsed})${transformedSuffix}`;
   };
 };
