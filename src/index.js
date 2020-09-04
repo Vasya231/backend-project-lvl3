@@ -64,7 +64,9 @@ const isLocal = (pathToResource, pageUrl) => {
   return (resourceUrl.hostname === hostname);
 };
 
-const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
+const extractAndReplaceLinks = (html, pageUrl, resourceDirName) => {
+  const $ = cheerio.load(html);
+  logger.dom('Html parsed.');
   const { origin } = pageUrl;
   const resourceFilenameMap = new Map();
   const generateResourceFileName = getResourceFilenameGenerationFunction();
@@ -96,7 +98,12 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
   };
 
   tags.forEach(processTag);
-  return resourceFilenameMap;
+  const renderedHtml = beautify.html(
+    $.root().html(),
+    { indent_size: 2 },
+  );
+
+  return { resourceFilenameMap, renderedHtml };
 };
 
 const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
@@ -128,19 +135,14 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
   return sendGetReqWithTimeout(pageUrl.href, timeout)
     .then((response) => {
       logger.network('Page loaded.');
-      const $ = cheerio.load(response.data);
-      logger.main('Html parsed.');
 
-      resourceFilenameMap = extractAndReplaceLinks($, pageUrl, resourceDirName);
+      ({
+        resourceFilenameMap, renderedHtml,
+      } = extractAndReplaceLinks(response.data, pageUrl, resourceDirName));
       logger.main('Local resources:');
       resourceFilenameMap.forEach((dlLink, filename) => {
         logger.main(`${dlLink} : ${filename}`);
       });
-
-      renderedHtml = beautify.html(
-        $.root().html(),
-        { indent_size: 2 },
-      );
     })
     .then(() => fs.mkdir(resourceDirPath))
     .then(() => {
