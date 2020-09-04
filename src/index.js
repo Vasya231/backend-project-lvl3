@@ -99,6 +99,14 @@ const extractAndReplaceLinks = ($, pageUrl, resourceDirName) => {
   return resourceFilenameMap;
 };
 
+const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
+  dlLink, timeout, { responseType: 'arraybuffer' },
+).then(({ data }) => {
+  logger.network(`${dlLink} successfully loaded.`);
+  return fs.writeFile(filePath, data)
+    .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
+});
+
 const transformError = (error) => Promise.reject(friendifyError(error));
 
 export default (pageAddress, pathToDir, timeout = 3000) => {
@@ -113,14 +121,6 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
   const { pageFilePath, resourceDirName, resourceDirPath } = generateLocalPaths(pageUrl, pathToDir);
   logger.main(`Generated path to saved page file: ${pageFilePath}`);
   logger.main(`Generated path to saved resources dir: ${resourceDirPath}`);
-
-  const generateDownloadResourcePromise = (dlLink, filePath) => sendGetReqWithTimeout(
-    dlLink, timeout, { responseType: 'arraybuffer' },
-  ).then(({ data }) => {
-    logger.network(`${dlLink} successfully loaded.`);
-    return fs.writeFile(filePath, data)
-      .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
-  });
 
   let resourceFilenameMap;
   let renderedHtml;
@@ -154,7 +154,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
           const resourceFilePath = path.join(resourceDirPath, filename);
           return {
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
-            task: () => generateDownloadResourcePromise(dlLink, resourceFilePath)
+            task: () => downloadResource(dlLink, resourceFilePath, timeout)
               .catch(transformError),
           };
         });
