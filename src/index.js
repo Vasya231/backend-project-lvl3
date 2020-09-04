@@ -88,8 +88,6 @@ const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
     .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
 });
 
-const transformError = (error) => Promise.reject(friendifyError(error));
-
 export default (pageAddress, pathToDir, timeout = 3000) => {
   try {
     validateArguments(pageAddress, pathToDir, timeout);
@@ -131,10 +129,10 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
           return {
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
             task: () => downloadResource(dlLink, resourceFilePath, timeout)
-              .catch(transformError),
+              .catch((error) => Promise.reject(friendifyError(error))),
           };
         });
       return (new Listr(tasks, { concurrent: true, exitOnError: false })).run();
     })
-    .catch(transformError);
+    .catch((error) => Promise.reject(friendifyError(error)));
 };
