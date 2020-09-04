@@ -114,10 +114,8 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
   logger.main(`Generated path to saved page file: ${pageFilePath}`);
   logger.main(`Generated path to saved resources dir: ${resourceDirPath}`);
 
-  const axiosGet = (url, options = {}) => sendGetReqWithTimeout(url, timeout, options);
-
-  const generateDownloadResourcePromise = (dlLink, filePath) => axiosGet(
-    dlLink, { responseType: 'arraybuffer' },
+  const generateDownloadResourcePromise = (dlLink, filePath) => sendGetReqWithTimeout(
+    dlLink, timeout, { responseType: 'arraybuffer' },
   ).then(({ data }) => {
     logger.network(`${dlLink} successfully loaded.`);
     return fs.writeFile(filePath, data)
@@ -127,7 +125,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
   let resourceFilenameMap;
   let renderedHtml;
 
-  return axiosGet(pageUrl.href)
+  return sendGetReqWithTimeout(pageUrl.href, timeout)
     .then((response) => {
       logger.network('Page loaded.');
       const $ = cheerio.load(response.data);
