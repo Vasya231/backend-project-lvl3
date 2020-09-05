@@ -83,7 +83,7 @@ const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
   logger.network(`${dlLink} successfully loaded.`);
   return fs.writeFile(filePath, data)
     .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
-});
+}).catch((error) => Promise.reject(friendifyError(error))); // for listr
 
 export default (pageAddress, pathToDir, timeout = 3000) => {
   try {
@@ -125,8 +125,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
           const resourceFilePath = path.join(resourceDirPath, filename);
           return {
             title: `Downloading ${dlLink} to ${resourceFilePath}`,
-            task: () => downloadResource(dlLink, resourceFilePath, timeout)
-              .catch((error) => Promise.reject(friendifyError(error))),
+            task: () => downloadResource(dlLink, resourceFilePath, timeout),
           };
         });
       return (new Listr(tasks, { concurrent: true, exitOnError: false })).run();
