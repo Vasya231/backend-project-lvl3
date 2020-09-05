@@ -33,7 +33,7 @@ const validateArguments = (pageAddress, pathToDir, timeout) => {
   }, { strict: true });
 };
 
-const extractAndReplaceLinksAndAlsoRenderHtml = (html, pageUrl, resourceDirName) => {
+const prepareResourcesAndHtml = (html, pageUrl, resourceDirName) => {
   const $ = cheerio.load(html);
   logger.dom('Html parsed.');
   const { origin } = pageUrl;
@@ -46,10 +46,7 @@ const extractAndReplaceLinksAndAlsoRenderHtml = (html, pageUrl, resourceDirName)
     return links.filter((link) => (link && isLocal(link, pageUrl)));
   };
 
-  const localLinks = tags.reduce(
-    (acc, tag) => [...acc, ...extractLocalLinks(tag)],
-    [],
-  );
+  const localLinks = tags.flatMap(extractLocalLinks);
   logger.dom(`Local links: ${localLinks}`);
   const uniqueLocalLinks = uniq(localLinks);
   logger.dom(`Unique local links: ${uniqueLocalLinks}`);
@@ -110,7 +107,7 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
 
       ({
         resourcesWithLinks, renderedHtml,
-      } = extractAndReplaceLinksAndAlsoRenderHtml(response.data, pageUrl, resourceDirName));
+      } = prepareResourcesAndHtml(response.data, pageUrl, resourceDirName));
       logger.main('Local resources:');
       resourcesWithLinks.forEach(({ dlLink, filename }) => {
         logger.main(`${dlLink} : ${filename}`);
