@@ -88,6 +88,7 @@ const toListrTask = (title, task) => ({
   task: () => Promise.resolve()
     .then(task)
     .catch((error) => Promise.reject(friendifyError(error))),
+  // transforming error here so that listr will display transformed error
 });
 
 export default (pageAddress, pathToDir, timeout = 3000) => {
