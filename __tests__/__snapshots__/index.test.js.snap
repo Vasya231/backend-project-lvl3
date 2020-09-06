@@ -30,6 +30,7 @@ exports[`Positive testing Download, transform and save the page 1`] = `
     <script src=\\"testhost-ru-page1_files/assets-script1.js\\"></script>
     <img src=\\"testhost-ru-page1_files/assets-img1.jpg\\">
     <img src=\\"https://something.com/pic.jpg\\">
+    <img src=\\"testhost-ru-page1_files/assets-img1.jpg\\">
 
     <div class=\\"row\\">
       <div class=\\"col-12 col-md-5 mb-3\\">
