@@ -39,14 +39,12 @@ const prepareResourcesAndHtml = (html, pageUrl, resourceDirName) => {
   const { origin } = pageUrl;
   const generateResourceFileName = getResourceFilenameGenerationFunction();
 
-  const extractLocalLinks = (tagName) => {
+  const localLinks = tags.flatMap((tagName) => {
     logger.dom(`Processing tag: "${tagName}"`);
     const attributeWithLink = tagLinkMap[tagName];
     const links = $(tagName).map((index, element) => $(element).attr(attributeWithLink)).get();
     return links.filter((link) => (link && isLocal(link, pageUrl)));
-  };
-
-  const localLinks = tags.flatMap(extractLocalLinks);
+  });
   logger.dom(`Local links: ${localLinks}`);
   const uniqueLocalLinks = uniq(localLinks);
   logger.dom(`Unique local links: ${uniqueLocalLinks}`);
@@ -83,7 +81,14 @@ const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
   logger.network(`${dlLink} successfully loaded.`);
   return fs.writeFile(filePath, data)
     .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
-}).catch((error) => Promise.reject(friendifyError(error))); // for listr
+});
+
+const toListrTask = (title, task) => ({
+  title,
+  task: () => Promise.resolve()
+    .then(task)
+    .catch((error) => Promise.reject(friendifyError(error))),
+});
 
 export default (pageAddress, pathToDir, timeout = 3000) => {
   try {
@@ -123,10 +128,8 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
       const tasks = resourcesWithLinks
         .map(({ dlLink, filename }) => {
           const resourceFilePath = path.join(resourceDirPath, filename);
-          return {
-            title: `Downloading ${dlLink} to ${resourceFilePath}`,
-            task: () => downloadResource(dlLink, resourceFilePath, timeout),
-          };
+          return toListrTask(`Downloading ${dlLink} to ${resourceFilePath}`,
+            () => downloadResource(dlLink, resourceFilePath, timeout));
         });
       return (new Listr(tasks, { concurrent: true, exitOnError: false })).run();
     })
