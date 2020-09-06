@@ -85,8 +85,7 @@ const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
 
 const toListrTask = (title, task) => ({
   title,
-  task: () => Promise.resolve()
-    .then(task)
+  task: () => task()
     .catch((error) => Promise.reject(friendifyError(error))),
   // transforming error here so that listr will display transformed error
 });
