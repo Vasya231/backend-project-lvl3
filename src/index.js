@@ -56,7 +56,7 @@ const prepareResourcesAndHtml = (html, pageUrl, resourceDirName) => {
       filename: generateResourceFileName(dlLinkURL),
     };
   });
-  logger.dom('%o', resourcesWithLinks);
+  logger.dom('Local resources: %o', resourcesWithLinks);
 
   resourcesWithLinks.forEach(({ localLink, filename }) => {
     const newLink = path.join(resourceDirName, filename);
@@ -83,11 +83,11 @@ const downloadResource = (dlLink, filePath, timeout) => sendGetReqWithTimeout(
     .then(() => logger.fs(`Resource file saved, path: ${filePath}`));
 });
 
-const toListrTask = (title, task) => ({
+const createListrTask = (title, task) => ({
   title,
   task: () => task()
     .catch((error) => Promise.reject(friendifyError(error))),
-  // transforming error here so that listr will display transformed error
+  // transforming error here for listr error display
 });
 
 export default (pageAddress, pathToDir, timeout = 3000) => {
@@ -113,10 +113,6 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
       ({
         resourcesWithLinks, renderedHtml,
       } = prepareResourcesAndHtml(response.data, pageUrl, resourceDirName));
-      logger.main('Local resources:');
-      resourcesWithLinks.forEach(({ dlLink, filename }) => {
-        logger.main(`${dlLink} : ${filename}`);
-      });
     })
     .then(() => fs.mkdir(resourceDirPath))
     .then(() => {
@@ -128,8 +124,8 @@ export default (pageAddress, pathToDir, timeout = 3000) => {
       const tasks = resourcesWithLinks
         .map(({ dlLink, filename }) => {
           const resourceFilePath = path.join(resourceDirPath, filename);
-          return toListrTask(`Downloading ${dlLink} to ${resourceFilePath}`,
-            () => downloadResource(dlLink, resourceFilePath, timeout));
+          const task = () => downloadResource(dlLink, resourceFilePath, timeout);
+          return createListrTask(`Downloading ${dlLink} to ${resourceFilePath}`, task);
         });
       return (new Listr(tasks, { concurrent: true, exitOnError: false })).run();
     })
