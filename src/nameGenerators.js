@@ -1,75 +1,40 @@
 import path from 'path';
+import { words, compact } from 'lodash';
 
-const transformString = (str) => str.replace(/\W/, '-');
+const transformString = (str) => words([str], /\w+/g).join('-');
 
-const parsePathname = (pathname) => {
-  const pathnameParts = pathname.split('/').filter((part) => part !== '');
-  if (pathname.endsWith('/')) {
-    return {
-      pathnameParts,
-      filename: '',
-      extension: null,
-    };
-  }
-  const pathnamePartsCount = pathnameParts.length;
-  const fullFilename = pathnameParts[pathnamePartsCount - 1];
-  const extension = path.extname(fullFilename);
-  const filename = path.basename(fullFilename, extension);
-  return {
-    pathnameParts: pathnameParts.slice(0, pathnamePartsCount - 1),
-    filename,
-    extension,
-  };
-};
-
-const generatePrefix = (url, fileType = 'page') => {
+const generatePrefix = (url) => {
   const { search, hostname, pathname } = url;
-  const { pathnameParts, filename } = parsePathname(pathname);
-  const formattedSearch = (search !== '')
-    ? search.slice(0, search.length - 1)
-    : '';
-  const prefixFromHostname = (fileType === 'resource') ? '' : hostname;
-  const prefixParts = [prefixFromHostname, ...pathnameParts, filename, formattedSearch];
-  const transformedPrefix = prefixParts
-    .filter((part) => part !== '')
-    .map(transformString)
-    .join('-');
-  return transformedPrefix;
+  const extension = path.posix.extname(pathname);
+  const dirname = path.posix.dirname(pathname);
+  const basename = path.posix.basename(pathname, extension);
+  const prefixParts = [hostname, dirname, basename, search].map(transformString);
+  return compact(prefixParts).join('-');
 };
-
-export const generateLocalFileName = (url) => {
-  const { pathname } = url;
-  const { extension } = parsePathname(pathname);
-  const transformedSuffix = extension ? `.${transformString(extension.slice(1))}` : '.html';
-  const transformedPrefix = generatePrefix(url);
-  return `${transformedPrefix}${transformedSuffix}`;
-};
-
-export const generateResourceDirName = (url) => `${generatePrefix(url)}_files`;
 
 export const getResourceFilenameGenerationFunction = () => {
   const usedNamesWithUseCount = new Map();
   return (url) => {
-    const { pathname } = url;
-    const { extension } = parsePathname(pathname);
-    const transformedPrefix = generatePrefix(url, 'resource');
-    const transformedSuffix = extension ? `.${transformString(extension.slice(1))}` : '';
-    const baseFilename = `${transformedPrefix}${transformedSuffix}`;
+    const { pathname, search } = url;
+    const extension = path.posix.extname(pathname);
+    const prefix = generatePrefix({ pathname, search, hostname: '' });
+    const baseFilename = `${prefix}${extension}`;
     const timesUsed = usedNamesWithUseCount.get(baseFilename);
     if (!timesUsed) {
       usedNamesWithUseCount.set(baseFilename, 1);
       return baseFilename;
     }
     usedNamesWithUseCount.set(baseFilename, timesUsed + 1);
-    return `${transformedPrefix}(${timesUsed})${transformedSuffix}`;
+    return `${prefix}(${timesUsed})${extension}`;
   };
 };
 
 export const generateLocalPaths = (pageUrl, pathToDir) => {
   const fullPathToDir = path.resolve(process.cwd(), pathToDir);
-  const pageFileName = generateLocalFileName(pageUrl);
+  const prefix = generatePrefix(pageUrl);
+  const pageFileName = `${prefix}.html`;
   const pageFilePath = path.join(fullPathToDir, pageFileName);
-  const resourceDirName = generateResourceDirName(pageUrl);
+  const resourceDirName = `${prefix}_files`;
   const resourceDirPath = path.join(fullPathToDir, resourceDirName);
   return {
     pageFilePath,
