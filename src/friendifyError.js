@@ -20,23 +20,23 @@ const translateCode = (codeToTranslate) => {
 
 const friendifyFSError = (error) => {
   const {
-    code, path: where, syscall,
+    code, path: target, syscall,
   } = error;
-  const what = syscallTranslations[syscall] || syscall;
-  const why = translateCode(code);
+  const action = syscallTranslations[syscall] || syscall;
+  const reason = translateCode(code);
   // eslint-disable-next-line no-param-reassign
-  error.message = `Cannot ${what} '${where}'. Reason: ${why}`;
+  error.message = `Cannot ${action} '${target}'. Reason: ${reason}`;
   return error;
 };
 
 const friendifyAxiosError = (error) => {
   const {
-    config: { url: where }, syscall, message, code,
+    config: { url: target }, syscall, message, code,
   } = error;
-  const what = syscallTranslations[syscall] || syscall || 'load';
-  const why = translateCode(code) || message;
+  const action = syscallTranslations[syscall] || syscall || 'load';
+  const reason = translateCode(code) || message;
   // eslint-disable-next-line no-param-reassign
-  error.message = `Cannot ${what} '${where}'. Reason: ${why}`;
+  error.message = `Cannot ${action} '${target}'. Reason: ${reason}`;
   return error;
 };
 

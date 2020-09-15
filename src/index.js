@@ -10,7 +10,7 @@ import { uniq } from 'lodash';
 import logger from './lib/logger';
 import { generateLocalPaths, getResourceFilenameGenerationFunction } from './nameGenerators';
 import friendifyError from './friendifyError';
-import { sendGetReqWithTimeout, isLocal } from './utils';
+import { sendGetReqWithTimeout, isLocalLink } from './utils';
 
 const tagLinkMap = {
   img: 'src',
@@ -43,7 +43,7 @@ const prepareResourcesAndHtml = (html, pageUrl, resourceDirName) => {
     logger.dom(`Processing tag: "${tagName}"`);
     const attributeWithLink = tagLinkMap[tagName];
     const links = $(tagName).map((index, element) => $(element).attr(attributeWithLink)).get();
-    return links.filter((link) => (link && isLocal(link, pageUrl)));
+    return links.filter((link) => (link && isLocalLink(link, pageUrl)));
   });
   logger.dom(`Local links: ${localLinks}`);
   const uniqueLocalLinks = uniq(localLinks);

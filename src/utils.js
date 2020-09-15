@@ -29,7 +29,7 @@ export const sendGetReqWithTimeout = (url, timeout, options = {}) => {
     });
 };
 
-export const isLocal = (pathToResource, pageUrl) => {
+export const isLocalLink = (pathToResource, pageUrl) => {
   const { origin, hostname } = pageUrl;
   const resourceUrl = new URL(pathToResource, origin);
   return (resourceUrl.hostname === hostname);
