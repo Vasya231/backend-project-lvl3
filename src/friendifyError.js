@@ -18,40 +18,38 @@ const translateCode = (codeToTranslate) => {
   return standartNodeError.description;
 };
 
-const messageGenerators = {
-  node: (error) => {
-    const {
-      code, path: target, syscall,
-    } = error;
-    const action = syscallTranslations[syscall] || syscall;
-    const reason = translateCode(code);
-    return `Cannot ${action} '${target}'. Reason: ${reason}`;
+const messageGenerators = [
+  {
+    generateMessage: (error) => {
+      const {
+        config: { url: target }, syscall, message, code,
+      } = error;
+      const action = syscallTranslations[syscall] || syscall || 'load';
+      const reason = translateCode(code) || message;
+      return `Cannot ${action} '${target}'. Reason: ${reason}`;
+    },
+    check: (error) => !!error.isAxiosError,
   },
-  axios: (error) => {
-    const {
-      config: { url: target }, syscall, message, code,
-    } = error;
-    const action = syscallTranslations[syscall] || syscall || 'load';
-    const reason = translateCode(code) || message;
-    return `Cannot ${action} '${target}'. Reason: ${reason}`;
+  {
+    generateMessage: (error) => {
+      const {
+        code, path: target, syscall,
+      } = error;
+      const action = syscallTranslations[syscall] || syscall;
+      const reason = translateCode(code);
+      return `Cannot ${action} '${target}'. Reason: ${reason}`;
+    },
+    check: (error) => !!error.code,
   },
-  plain: (error) => error.message,
-};
-
-const getErrorType = (error) => {
-  const { isAxiosError, code } = error;
-  if (isAxiosError) {
-    return 'axios';
-  }
-  if (code) {
-    return 'node';
-  }
-  return 'plain';
-};
+  {
+    generateMessage: (error) => error.message,
+    check: () => true,
+  },
+];
 
 const friendifyError = (error) => {
-  const errorType = getErrorType(error);
-  const message = messageGenerators[errorType](error);
+  const { generateMessage } = messageGenerators.find(({ check }) => check(error));
+  const message = generateMessage(error);
   return new Error(message);
 };
 
