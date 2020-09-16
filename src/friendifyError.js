@@ -18,33 +18,41 @@ const translateCode = (codeToTranslate) => {
   return standartNodeError.description;
 };
 
-const friendifyFSError = (error) => {
-  const {
-    code, path: target, syscall,
-  } = error;
-  const action = syscallTranslations[syscall] || syscall;
-  const reason = translateCode(code);
-  return new Error(`Cannot ${action} '${target}'. Reason: ${reason}`);
+const messageGenerators = {
+  node: (error) => {
+    const {
+      code, path: target, syscall,
+    } = error;
+    const action = syscallTranslations[syscall] || syscall;
+    const reason = translateCode(code);
+    return `Cannot ${action} '${target}'. Reason: ${reason}`;
+  },
+  axios: (error) => {
+    const {
+      config: { url: target }, syscall, message, code,
+    } = error;
+    const action = syscallTranslations[syscall] || syscall || 'load';
+    const reason = translateCode(code) || message;
+    return `Cannot ${action} '${target}'. Reason: ${reason}`;
+  },
+  plain: (error) => error.message,
 };
 
-const friendifyAxiosError = (error) => {
-  const {
-    config: { url: target }, syscall, message, code,
-  } = error;
-  const action = syscallTranslations[syscall] || syscall || 'load';
-  const reason = translateCode(code) || message;
-  return new Error(`Cannot ${action} '${target}'. Reason: ${reason}`);
+const getErrorType = (error) => {
+  const { isAxiosError, code } = error;
+  if (isAxiosError) {
+    return 'axios';
+  }
+  if (code) {
+    return 'node';
+  }
+  return 'plain';
 };
 
 const friendifyError = (error) => {
-  const { isAxiosError, code } = error;
-  if (isAxiosError) {
-    return friendifyAxiosError(error);
-  }
-  if (code) {
-    return friendifyFSError(error);
-  }
-  return error;
+  const errorType = getErrorType(error);
+  const message = messageGenerators[errorType](error);
+  return new Error(message);
 };
 
 export default friendifyError;
