@@ -24,9 +24,7 @@ const friendifyFSError = (error) => {
   } = error;
   const action = syscallTranslations[syscall] || syscall;
   const reason = translateCode(code);
-  // eslint-disable-next-line no-param-reassign
-  error.message = `Cannot ${action} '${target}'. Reason: ${reason}`;
-  return error;
+  return new Error(`Cannot ${action} '${target}'. Reason: ${reason}`);
 };
 
 const friendifyAxiosError = (error) => {
@@ -35,9 +33,7 @@ const friendifyAxiosError = (error) => {
   } = error;
   const action = syscallTranslations[syscall] || syscall || 'load';
   const reason = translateCode(code) || message;
-  // eslint-disable-next-line no-param-reassign
-  error.message = `Cannot ${action} '${target}'. Reason: ${reason}`;
-  return error;
+  return new Error(`Cannot ${action} '${target}'. Reason: ${reason}`);
 };
 
 const friendifyError = (error) => {
